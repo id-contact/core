@@ -1,0 +1,17 @@
+version: '3.7'
+services:
+  backend:
+    image: docker.tgrep.nl/docker/rust-dev:stable
+    volumes: [ ".:/app" ]
+    command: [ "cargo", "watch", "-w", "src", "-x", "run" ]
+    working_dir: /app
+    tty: true
+    environment:
+      ROCKET_PORT: 8000
+      ROCKET_ADDRESS: 0.0.0.0
+      IDC_CORE_CONFIG_FILE: /app/config.yml
+    ports: [ "127.0.0.1:8000:8000" ]
+    networks: [ default ]
+
+networks:
+  default: ~
