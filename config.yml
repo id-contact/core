@@ -11,11 +11,11 @@ auth_methods:
 comm_methods:
   - tag: call
     name: Bellen
-    image_path: /static/irma.svg
+    image_path: /static/phone.svg
     start: https://irma.auth.id-contact.
     purposes: [report_move, request_passport, request_permit]
   - tag: chat
     name: Chatten
-    image_path: /static/digid.svg
+    image_path: /static/chat.svg
     start: https://digid.auth.id-contact.n
     purposes: [report_move, request_permit]
