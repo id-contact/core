@@ -13,8 +13,8 @@ struct MethodProperties {
 
 impl MethodProperties {
     fn filter_methods_by_purpose<T: Method>(
-        methods: &Vec<T>,
-        purpose: &String,
+        methods: &[T],
+        purpose: &str,
     ) -> Vec<MethodProperties> {
         methods
             .iter()

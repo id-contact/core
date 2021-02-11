@@ -4,9 +4,9 @@ pub type Tag = String;
 
 pub trait Method {
     fn tag(&self) -> &Tag;
-    fn name(&self) -> &String;
-    fn image_path(&self) -> &String;
-    fn supports(&self, purpose: &String) -> bool;
+    fn name(&self) -> &str;
+    fn image_path(&self) -> &str;
+    fn supports(&self, purpose: &str) -> bool;
 }
 
 #[derive(Debug, Deserialize)]
@@ -22,15 +22,15 @@ impl Method for AuthenticationMethod {
         &self.tag
     }
 
-    fn name(&self) -> &String {
+    fn name(&self) -> &str {
         &self.name
     }
 
-    fn image_path(&self) -> &String {
+    fn image_path(&self) -> &str {
         &self.image_path
     }
 
-    fn supports(&self, _purpose: &String) -> bool {
+    fn supports(&self, _purpose: &str) -> bool {
         true
     }
 }
@@ -49,15 +49,15 @@ impl Method for CommunicationMethod {
         &self.tag
     }
 
-    fn name(&self) -> &String {
+    fn name(&self) -> &str {
         &self.name
     }
 
-    fn image_path(&self) -> &String {
+    fn image_path(&self) -> &str {
         &self.image_path
     }
 
-    fn supports(&self, purpose: &String) -> bool {
-        self.purposes.contains(purpose)
+    fn supports(&self, purpose: &str) -> bool {
+        self.purposes.contains(&purpose.to_string())
     }
 }

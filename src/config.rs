@@ -14,7 +14,7 @@ impl CoreConfig {
             .unwrap_or_else(|_| panic!("Could not read the config file {}", filename));
 
         let config: CoreConfig = serde_yaml::from_str(&contents)
-            .expect(&format!("Error parsing the config file {}", filename));
+            .unwrap_or_else(|_| panic!("Error parsing the config file {}", filename));
 
         config
     }
