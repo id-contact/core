@@ -1,18 +1,15 @@
 mod config;
 mod methods;
 mod options;
+mod start;
 
 #[macro_use]
 extern crate rocket;
 
 use config::CoreConfig;
 use options::session_options;
+use start::session_start;
 use std::env;
-
-#[post("/start")]
-fn start() -> &'static str {
-    "Hello, world!"
-}
 
 #[launch]
 fn rocket() -> rocket::Rocket {
@@ -21,5 +18,5 @@ fn rocket() -> rocket::Rocket {
 
     rocket::ignite()
         .manage(CoreConfig::from_file(&config_filename))
-        .mount("/", routes![session_options, start])
+        .mount("/", routes![session_options, session_start])
 }

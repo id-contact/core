@@ -11,7 +11,7 @@ pub struct CoreConfig {
 impl CoreConfig {
     pub fn from_file(filename: &str) -> CoreConfig {
         let contents = fs::read_to_string(filename)
-            .expect(&format!("Could not read the config file {}", filename));
+            .unwrap_or_else(|_| panic!("Could not read the config file {}", filename));
 
         let config: CoreConfig = serde_yaml::from_str(&contents)
             .expect(&format!("Error parsing the config file {}", filename));
