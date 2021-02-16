@@ -2,17 +2,17 @@ auth_methods:
   - tag: irma
     name: Gebruik je IRMA app
     image_path: /static/irma.svg
-    start: https://irma.auth.id-contact.nl
+    start: http://auth-irma:8000
   - tag: digid
     name: Gebruik DigiD
     image_path: /static/digid.svg
-    start: https://digid.auth.id-contact.nl
+    start: http://auth-test:8000
 
 comm_methods:
   - tag: call
     name: Bellen
     image_path: /static/phone.svg
-    start: https://irma.auth.id-contact.
+    start: http://comm-matrix-bot:3000
     purposes: [report_move, request_passport, request_permit]
   - tag: chat
     name: Chatten
