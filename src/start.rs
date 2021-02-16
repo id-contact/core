@@ -1,6 +1,8 @@
-use crate::methods::Tag;
+use crate::{config::CoreConfig, methods::Tag};
+use rocket::State;
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
+use std::{error::Error as StdError, fmt::Display};
 
 #[derive(Debug, Deserialize)]
 pub struct MethodChoices {
@@ -14,11 +16,81 @@ pub struct ClientUrlResponse {
     client_url: String,
 }
 
-#[post("/start", format = "json", data = "<choices>")]
-pub fn session_start(choices: Json<MethodChoices>) -> Json<ClientUrlResponse> {
-    println!("Choices: {:?}", choices);
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AuthRequest {
+    pub attributes: Vec<String>,
+    pub continuation: String,
+    pub attr_url: Option<String>,
+}
 
-    Json(ClientUrlResponse {
-        client_url: "https://youtu.be/dQw4w9WgXcQ".to_string(),
-    })
+#[derive(Debug, Serialize, Deserialize)]
+pub struct StartAuthResponse {
+    pub client_url: String,
+}
+
+#[derive(Debug)]
+pub enum Error {
+    NoSuchMethod(String),
+    NoSuchPurpose(String),
+    Reqwest(reqwest::Error),
+}
+
+impl From<reqwest::Error> for Error {
+    fn from(e: reqwest::Error) -> Error {
+        Error::Reqwest(e)
+    }
+}
+
+impl<'r, 'o: 'r> rocket::response::Responder<'r, 'o> for Error {
+    fn respond_to(self, request: &'r rocket::Request<'_>) -> rocket::response::Result<'o> {
+        match self {
+            Error::NoSuchMethod(m) => {
+                let bad_request = rocket::response::status::BadRequest::<()>(None);
+                println!("Unknown method {}", m);
+                bad_request.respond_to(request)
+            },
+            Error::NoSuchPurpose(m) => {
+                let bad_request = rocket::response::status::BadRequest::<()>(None);
+                println!("Unknown purpose {}", m);
+                bad_request.respond_to(request)
+            },
+            _ => {
+                let debug_error = rocket::response::Debug::from(self);
+                debug_error.respond_to(request)
+            },
+        }
+    }
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::NoSuchMethod(m) => f.write_fmt(format_args!("No such method: {}", m)),
+            Error::NoSuchPurpose(m) => f.write_fmt(format_args!("No such purpose: {}", m)),
+            Error::Reqwest(e) => e.fmt(f),
+        }
+    }
+}
+
+impl StdError for Error {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        match self {
+            Error::Reqwest(e) => Some(e),
+            _ => None,
+        }
+    }
+}
+
+#[post("/start", format = "json", data = "<choices>")]
+pub async fn session_start(choices: Json<MethodChoices>, config: State<'_, CoreConfig>) -> Result<Json<ClientUrlResponse>, Error> {
+    let auth_method = config.auth_methods.get(&choices.auth_method).ok_or_else(|| Error::NoSuchMethod(choices.auth_method.clone()))?;
+    let comm_method = config.comm_methods.get(&choices.comm_method).ok_or_else(|| Error::NoSuchMethod(choices.comm_method.clone()))?;
+    let attributes = config.purpose_attributes.get(&choices.purpose).ok_or_else(|| Error::NoSuchPurpose(choices.purpose.clone()))?;
+
+    let comm_data = comm_method.start(&choices.purpose).await?;
+    let client_url = auth_method.start(attributes, &comm_data.client_url, &comm_data.attr_url).await?;
+
+    Ok(Json(ClientUrlResponse {
+        client_url,
+    }))
 }

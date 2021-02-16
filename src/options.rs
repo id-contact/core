@@ -12,12 +12,11 @@ struct MethodProperties {
 }
 
 impl MethodProperties {
-    fn filter_methods_by_purpose<T: Method>(
-        methods: &[T],
+    fn filter_methods_by_purpose<'a, M: Method + 'a, I: Iterator<Item = &'a M>>(
+        methods: I,
         purpose: &str,
     ) -> Vec<MethodProperties> {
         methods
-            .iter()
             .filter(|&method| method.supports(purpose))
             .map(|method| MethodProperties {
                 tag: String::from(method.tag()),
@@ -36,8 +35,8 @@ pub struct SessionOptions {
 
 #[get("/session_options/<purpose>")]
 pub fn session_options(purpose: String, config: State<CoreConfig>) -> Json<SessionOptions> {
-    let auth_methods = MethodProperties::filter_methods_by_purpose(&config.auth_methods, &purpose);
-    let comm_methods = MethodProperties::filter_methods_by_purpose(&config.comm_methods, &purpose);
+    let auth_methods = MethodProperties::filter_methods_by_purpose(config.auth_methods.values(), &purpose);
+    let comm_methods = MethodProperties::filter_methods_by_purpose(config.comm_methods.values(), &purpose);
 
     Json(SessionOptions {
         auth_methods,

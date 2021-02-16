@@ -19,3 +19,11 @@ comm_methods:
     image_path: /static/chat.svg
     start: https://digid.auth.id-contact.n
     purposes: [report_move, request_permit]
+
+purpose_attributes:
+  report_move:
+    - email
+  request_passport:
+    - email
+  request_permit:
+    - email
