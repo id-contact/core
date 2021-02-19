@@ -12,7 +12,7 @@ comm_methods:
   - tag: call
     name: Bellen
     image_path: /static/phone.svg
-    start: http://comm-matrix-bot:3000
+    start: http://comm-test:8000
     purposes: [report_move, request_passport, request_permit]
   - tag: chat
     name: Chatten
