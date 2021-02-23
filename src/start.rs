@@ -16,18 +16,6 @@ pub struct ClientUrlResponse {
     client_url: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AuthRequest {
-    pub attributes: Vec<String>,
-    pub continuation: String,
-    pub attr_url: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct StartAuthResponse {
-    pub client_url: String,
-}
-
 #[derive(Debug)]
 pub enum Error {
     NoSuchMethod(String),
