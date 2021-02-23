@@ -1,4 +1,5 @@
-use serde::{Deserialize,Serialize};
+use serde::Deserialize;
+use id_contact_proto::{StartAuthRequest, StartAuthResponse, StartCommRequest, StartCommResponse};
 
 pub type Tag = String;
 
@@ -17,25 +18,13 @@ pub struct AuthenticationMethod {
     start: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct AuthRequest {
-    attributes: Vec<String>,
-    continuation: String,
-    attr_url: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct StartAuthResponse {
-    client_url: String,
-}
-
 impl AuthenticationMethod {
     pub async fn start(&self, attributes: &Vec<String>, continuation: &str, attr_url: &Option<String>) -> Result<String, reqwest::Error> {
         let client = reqwest::Client::new();
 
         Ok(client
             .post(&format!("{}/start_authentication", self.start))
-            .json(&AuthRequest{
+            .json(&StartAuthRequest{
                 attributes: attributes.clone(),
                 continuation: continuation.to_string(),
                 attr_url: attr_url.clone(),
@@ -93,24 +82,13 @@ impl Method for CommunicationMethod {
     }
 }
 
-#[derive(Debug, Serialize)]
-struct StartCommRequest {
-    purpose: Tag,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct StartCommResponse {
-    pub client_url: String,
-    pub attr_url: Option<String>,
-}
-
 impl CommunicationMethod {
     pub async fn start(&self, purpose: &Tag) -> Result<StartCommResponse, reqwest::Error> {
         let client = reqwest::Client::new();
 
         Ok(client
             .post(&format!("{}/start_communication", &self.start))
-            .json(&StartCommRequest{purpose: purpose.clone()})
+            .json(&StartCommRequest{purpose: purpose.clone(), attributes: None})
             .send()
             .await?
             .json::<StartCommResponse>()

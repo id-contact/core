@@ -450,12 +450,22 @@ dependencies = [
 name = "id-contact-core"
 version = "0.1.0"
 dependencies = [
+ "id-contact-proto",
  "reqwest",
  "rocket",
  "rocket_contrib",
  "serde",
  "serde_json",
  "serde_yaml",
+]
+
+[[package]]
+name = "id-contact-proto"
+version = "0.1.0"
+source = "git+https://github.com/id-contact/id-contact-proto.git#47d21a4aafde07966b098bca122b84e93bf70268"
+dependencies = [
+ "rocket",
+ "serde",
 ]
 
 [[package]]
