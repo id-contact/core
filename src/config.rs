@@ -25,16 +25,13 @@ pub struct CoreConfig {
     pub purposes: HashMap<String, Purpose>,
 }
 
-fn expand_wildcard<'a, T: Into<String> + 'a, I: Iterator<Item = T>>(target: &mut Vec<String>, options: I) {
-    let mut has_wildcard = false;
-    for val in target.iter() {
+fn contains_wildcard(target: &Vec<String>) -> bool {
+    for val in target {
         if val == "*" {
-            has_wildcard = true;
+            return true;
         }
     }
-    if has_wildcard {
-        target.splice(.., options.map(|x| x.into()));
-    }
+    false
 }
 
 fn validate_methods<T>(target: &Vec<String>, options: &HashMap<String, T>) -> bool {
@@ -56,8 +53,12 @@ impl From<RawCoreConfig> for CoreConfig {
 
         // Handle wildcards in purpose auth and comm method lists
         for purpose in config.purposes.values_mut() {
-            expand_wildcard(&mut purpose.allowed_auth, config.auth_methods.keys());
-            expand_wildcard(&mut purpose.allowed_comm, config.comm_methods.keys());
+            if contains_wildcard(&purpose.allowed_auth) {
+                purpose.allowed_auth = config.auth_methods.keys().map(|x| x.to_string()).collect();
+            }
+            if contains_wildcard(&purpose.allowed_comm) {
+                purpose.allowed_comm = config.comm_methods.keys().map(|x| x.to_string()).collect();
+            }
         }
 
         // check all mentioned auth and comm methods exist
