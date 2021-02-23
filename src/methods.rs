@@ -6,7 +6,6 @@ pub trait Method {
     fn tag(&self) -> &Tag;
     fn name(&self) -> &str;
     fn image_path(&self) -> &str;
-    fn supports(&self, purpose: &str) -> bool;
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -60,10 +59,6 @@ impl Method for AuthenticationMethod {
     fn image_path(&self) -> &str {
         &self.image_path
     }
-
-    fn supports(&self, _purpose: &str) -> bool {
-        true
-    }
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -72,7 +67,6 @@ pub struct CommunicationMethod {
     name: String,
     image_path: String,
     start: String,
-    purposes: Vec<String>,
 }
 
 impl Method for CommunicationMethod {
@@ -86,10 +80,6 @@ impl Method for CommunicationMethod {
 
     fn image_path(&self) -> &str {
         &self.image_path
-    }
-
-    fn supports(&self, purpose: &str) -> bool {
-        self.purposes.contains(&purpose.to_string())
     }
 }
 

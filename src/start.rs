@@ -83,12 +83,21 @@ impl StdError for Error {
 
 #[post("/start", format = "json", data = "<choices>")]
 pub async fn session_start(choices: Json<MethodChoices>, config: State<'_, CoreConfig>) -> Result<Json<ClientUrlResponse>, Error> {
+    // Check methods are allowed
+    let purpose = config.purposes.get(&choices.purpose).ok_or_else(|| Error::NoSuchPurpose(choices.purpose.clone()))?;
+    if !purpose.allowed_auth.contains(&choices.auth_method) {
+        return Err(Error::NoSuchMethod(choices.auth_method.clone()));
+    }
+    if !purpose.allowed_comm.contains(&choices.comm_method) {
+        return Err(Error::NoSuchMethod(choices.comm_method.clone()));
+    }
+    
+    // Generate response
     let auth_method = config.auth_methods.get(&choices.auth_method).ok_or_else(|| Error::NoSuchMethod(choices.auth_method.clone()))?;
     let comm_method = config.comm_methods.get(&choices.comm_method).ok_or_else(|| Error::NoSuchMethod(choices.comm_method.clone()))?;
-    let attributes = config.purpose_attributes.get(&choices.purpose).ok_or_else(|| Error::NoSuchPurpose(choices.purpose.clone()))?;
 
     let comm_data = comm_method.start(&choices.purpose).await?;
-    let client_url = auth_method.start(attributes, &comm_data.client_url, &comm_data.attr_url).await?;
+    let client_url = auth_method.start(&purpose.attributes, &comm_data.client_url, &comm_data.attr_url).await?;
 
     Ok(Json(ClientUrlResponse {
         client_url,
