@@ -13,17 +13,32 @@ comm_methods:
     name: Bellen
     image_path: /static/phone.svg
     start: http://comm-test:8000
-    purposes: [report_move, request_passport, request_permit]
   - tag: chat
     name: Chatten
     image_path: /static/chat.svg
     start: http://comm-matrix-bot:3000
-    purposes: [report_move, request_permit]
 
-purpose_attributes:
-  report_move:
-    - email
-  request_passport:
-    - email
-  request_permit:
-    - email
+purposes:
+  - tag: report_move
+    attributes:
+      - email
+    allowed_auth:
+      - "*"
+    allowed_comm:
+      - call
+      - chat
+  - tag: request_permit
+    attributes:
+      - email
+    allowed_auth:
+      - irma
+      - digid
+    allowed_comm:
+      - "*"
+  - tag: request_passport
+    attributes:
+      - email
+    allowed_auth:
+      - "*"
+    allowed_comm:
+      - call

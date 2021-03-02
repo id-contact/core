@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::config::CoreConfig;
 use crate::methods::{Method, Tag};
 use rocket::State;
@@ -12,18 +14,11 @@ struct MethodProperties {
 }
 
 impl MethodProperties {
-    fn filter_methods_by_purpose<'a, M: Method + 'a, I: Iterator<Item = &'a M>>(
-        methods: I,
-        purpose: &str,
-    ) -> Vec<MethodProperties> {
-        methods
-            .filter(|&method| method.supports(purpose))
-            .map(|method| MethodProperties {
-                tag: String::from(method.tag()),
-                name: String::from(method.name()),
-                image_path: String::from(method.image_path()),
-            })
-            .collect()
+    fn filter_methods_by_tags<'a, T: Method, I: Iterator<Item = &'a String>>(tags: I, methods: &HashMap<String, T>) -> Result<Vec<MethodProperties>, rocket::response::Debug<&'static str>> {
+        tags.map(|t| {
+            let method = methods.get(t).ok_or(rocket::response::Debug("Unknown method"))?;
+            Ok(MethodProperties{ tag: String::from(method.tag()), name: String::from(method.name()), image_path: String::from(method.image_path())})
+        }).collect()
     }
 }
 
@@ -34,12 +29,13 @@ pub struct SessionOptions {
 }
 
 #[get("/session_options/<purpose>")]
-pub fn session_options(purpose: String, config: State<CoreConfig>) -> Json<SessionOptions> {
-    let auth_methods = MethodProperties::filter_methods_by_purpose(config.auth_methods.values(), &purpose);
-    let comm_methods = MethodProperties::filter_methods_by_purpose(config.comm_methods.values(), &purpose);
+pub fn session_options(purpose: String, config: State<CoreConfig>) -> Result<Json<SessionOptions>, rocket::response::Debug<&'static str>> {
+    let purpose = config.purposes.get(&purpose).ok_or(rocket::response::Debug("unknown purpose"))?;
+    let auth_methods = MethodProperties::filter_methods_by_tags(purpose.allowed_auth.iter(), &config.auth_methods)?;
+    let comm_methods = MethodProperties::filter_methods_by_tags(purpose.allowed_comm.iter(), &config.comm_methods)?;
 
-    Json(SessionOptions {
+    Ok(Json(SessionOptions {
         auth_methods,
         comm_methods,
-    })
+    }))
 }
