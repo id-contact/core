@@ -1,8 +1,8 @@
+use crate::error::Error;
 use crate::{config::CoreConfig, methods::Tag};
 use rocket::State;
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
-use crate::error::Error;
 
 #[derive(Debug, Deserialize)]
 pub struct StartRequestFull {
@@ -31,7 +31,7 @@ pub struct ClientUrlResponse {
     client_url: String,
 }
 
-#[post("/start", format = "json", data = "<choices>", rank=1)]
+#[post("/start", format = "json", data = "<choices>", rank = 1)]
 pub async fn session_start_full(
     choices: Json<StartRequestFull>,
     config: State<'_, CoreConfig>,
@@ -54,7 +54,7 @@ pub async fn session_start_full(
     Ok(Json(ClientUrlResponse { client_url }))
 }
 
-#[post("/start", format = "json", data = "<choices>", rank=2)]
+#[post("/start", format = "json", data = "<choices>", rank = 2)]
 pub async fn session_start_auth_only(
     choices: Json<StartRequestAuthOnly>,
     config: State<'_, CoreConfig>,
@@ -71,7 +71,7 @@ pub async fn session_start_auth_only(
     Ok(Json(ClientUrlResponse { client_url }))
 }
 
-#[post("/start", format = "json", data = "<choices>", rank=3)]
+#[post("/start", format = "json", data = "<choices>", rank = 3)]
 pub async fn start_session_comm_only(
     choices: Json<StartRequestCommOnly>,
     config: State<'_, CoreConfig>,

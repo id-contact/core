@@ -1,8 +1,8 @@
 mod config;
+mod error;
 mod methods;
 mod options;
 mod start;
-mod error;
 
 #[macro_use]
 extern crate rocket;
