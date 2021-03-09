@@ -46,9 +46,21 @@ fn validate_methods<T>(target: &Vec<String>, options: &HashMap<String, T>) -> bo
 impl From<RawCoreConfig> for CoreConfig {
     fn from(config: RawCoreConfig) -> Self {
         let mut config = CoreConfig {
-            auth_methods: config.auth_methods.iter().map(|m| { (m.tag().clone(), m.clone()) }).collect(),
-            comm_methods: config.comm_methods.iter().map(|m| { (m.tag().clone(), m.clone()) }).collect(),
-            purposes: config.purposes.iter().map(|m| { (m.tag.clone(), m.clone()) }).collect(),
+            auth_methods: config
+                .auth_methods
+                .iter()
+                .map(|m| (m.tag().clone(), m.clone()))
+                .collect(),
+            comm_methods: config
+                .comm_methods
+                .iter()
+                .map(|m| (m.tag().clone(), m.clone()))
+                .collect(),
+            purposes: config
+                .purposes
+                .iter()
+                .map(|m| (m.tag.clone(), m.clone()))
+                .collect(),
         };
 
         // Handle wildcards in purpose auth and comm method lists

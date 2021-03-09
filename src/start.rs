@@ -1,14 +1,19 @@
-use crate::{config::CoreConfig, methods::Tag};
+use crate::{
+    config::{CoreConfig, Purpose},
+    methods::{AuthenticationMethod, CommunicationMethod, Tag},
+};
 use rocket::State;
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
 use std::{error::Error as StdError, fmt::Display};
 
 #[derive(Debug, Deserialize)]
-pub struct MethodChoices {
+pub struct StartRequest {
     purpose: String,
     auth_method: Tag,
-    comm_method: Tag,
+    comm_method: Option<Tag>,
+    comm_url: Option<String>,
+    attr_url: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -20,6 +25,7 @@ pub struct ClientUrlResponse {
 pub enum Error {
     NoSuchMethod(String),
     NoSuchPurpose(String),
+    MissingComm(),
     Reqwest(reqwest::Error),
 }
 
@@ -36,16 +42,16 @@ impl<'r, 'o: 'r> rocket::response::Responder<'r, 'o> for Error {
                 let bad_request = rocket::response::status::BadRequest::<()>(None);
                 println!("Unknown method {}", m);
                 bad_request.respond_to(request)
-            },
+            }
             Error::NoSuchPurpose(m) => {
                 let bad_request = rocket::response::status::BadRequest::<()>(None);
                 println!("Unknown purpose {}", m);
                 bad_request.respond_to(request)
-            },
+            }
             _ => {
                 let debug_error = rocket::response::Debug::from(self);
                 debug_error.respond_to(request)
-            },
+            }
         }
     }
 }
@@ -55,6 +61,7 @@ impl Display for Error {
         match self {
             Error::NoSuchMethod(m) => f.write_fmt(format_args!("No such method: {}", m)),
             Error::NoSuchPurpose(m) => f.write_fmt(format_args!("No such purpose: {}", m)),
+            Error::MissingComm() => f.write_str("No communication method specified"),
             Error::Reqwest(e) => e.fmt(f),
         }
     }
@@ -69,25 +76,70 @@ impl StdError for Error {
     }
 }
 
+pub async fn session_start_full(
+    auth_method: &AuthenticationMethod,
+    comm_method: &CommunicationMethod,
+    purpose: &Purpose,
+) -> Result<Json<ClientUrlResponse>, Error> {
+    let comm_data = comm_method.start(&purpose.tag).await?;
+    let client_url = auth_method
+        .start(
+            &purpose.attributes,
+            &comm_data.client_url,
+            &comm_data.attr_url,
+        )
+        .await?;
+
+    Ok(Json(ClientUrlResponse { client_url }))
+}
+
+pub async fn session_start_auth_during(
+    auth_method: &AuthenticationMethod,
+    comm_url: &str,
+    attr_url: &Option<String>,
+    purpose: &Purpose,
+) -> Result<Json<ClientUrlResponse>, Error> {
+    Ok(Json(ClientUrlResponse {
+        client_url: auth_method
+            .start(&purpose.attributes, comm_url, attr_url)
+            .await?,
+    }))
+}
+
 #[post("/start", format = "json", data = "<choices>")]
-pub async fn session_start(choices: Json<MethodChoices>, config: State<'_, CoreConfig>) -> Result<Json<ClientUrlResponse>, Error> {
-    // Check methods are allowed
-    let purpose = config.purposes.get(&choices.purpose).ok_or_else(|| Error::NoSuchPurpose(choices.purpose.clone()))?;
+pub async fn session_start(
+    choices: Json<StartRequest>,
+    config: State<'_, CoreConfig>,
+) -> Result<Json<ClientUrlResponse>, Error> {
+    // Check presence of purpose
+    let purpose = config
+        .purposes
+        .get(&choices.purpose)
+        .ok_or_else(|| Error::NoSuchPurpose(choices.purpose.clone()))?;
+
+    // Check and fetch auth method
     if !purpose.allowed_auth.contains(&choices.auth_method) {
         return Err(Error::NoSuchMethod(choices.auth_method.clone()));
     }
-    if !purpose.allowed_comm.contains(&choices.comm_method) {
-        return Err(Error::NoSuchMethod(choices.comm_method.clone()));
+    let auth_method = config
+        .auth_methods
+        .get(&choices.auth_method)
+        .ok_or_else(|| Error::NoSuchMethod(choices.auth_method.clone()))?;
+
+    if let Some(comm_method) = &choices.comm_method {
+        // Check and fetch comm method
+        if !purpose.allowed_comm.contains(comm_method) {
+            return Err(Error::NoSuchMethod(comm_method.clone()));
+        }
+        let comm_method = config
+            .comm_methods
+            .get(comm_method)
+            .ok_or_else(|| Error::NoSuchMethod(comm_method.clone()))?;
+
+        session_start_full(auth_method, comm_method, purpose).await
+    } else if let Some(comm_url) = &choices.comm_url {
+        session_start_auth_during(auth_method, comm_url, &choices.attr_url, purpose).await
+    } else {
+        Err(Error::MissingComm())
     }
-    
-    // Generate response
-    let auth_method = config.auth_methods.get(&choices.auth_method).ok_or_else(|| Error::NoSuchMethod(choices.auth_method.clone()))?;
-    let comm_method = config.comm_methods.get(&choices.comm_method).ok_or_else(|| Error::NoSuchMethod(choices.comm_method.clone()))?;
-
-    let comm_data = comm_method.start(&choices.purpose).await?;
-    let client_url = auth_method.start(&purpose.attributes, &comm_data.client_url, &comm_data.attr_url).await?;
-
-    Ok(Json(ClientUrlResponse {
-        client_url,
-    }))
 }
