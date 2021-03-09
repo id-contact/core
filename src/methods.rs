@@ -92,4 +92,23 @@ impl CommunicationMethod {
             .json::<StartCommResponse>()
             .await?)
     }
+
+    pub async fn start_with_attributes(
+        &self,
+        purpose: &Tag,
+        attributes: &str,
+    ) -> Result<StartCommResponse, reqwest::Error> {
+        let client = reqwest::Client::new();
+
+        Ok(client
+            .post(&format!("{}/start_communication", &self.start))
+            .json(&StartCommRequest {
+                purpose: purpose.clone(),
+                attributes: Some(attributes.to_string()),
+            })
+            .send()
+            .await?
+            .json::<StartCommResponse>()
+            .await?)
+    }
 }
