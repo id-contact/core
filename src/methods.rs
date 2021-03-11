@@ -1,4 +1,4 @@
-use id_contact_proto::{StartAuthRequest, StartAuthResponse, StartCommRequest, StartCommResponse};
+use id_contact_proto::{AuthResult, AuthStatus, StartAuthRequest, StartAuthResponse, StartCommRequest, StartCommResponse};
 use serde::Deserialize;
 
 pub type Tag = String;
@@ -55,12 +55,16 @@ impl Method for AuthenticationMethod {
     }
 }
 
+fn default_as_false() -> bool { false }
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct CommunicationMethod {
     tag: Tag,
     name: String,
     image_path: String,
     start: String,
+    #[serde(default="default_as_false")]
+    disable_attributes_at_start: bool,
 }
 
 impl Method for CommunicationMethod {
@@ -93,11 +97,51 @@ impl CommunicationMethod {
             .await?)
     }
 
+    async fn start_with_attributes_fallback(
+        &self,
+        purpose: &Tag,
+        attributes: &str,
+    ) -> Result<StartCommResponse, reqwest::Error> {
+        let comm_data = self.start(purpose).await?;
+
+        if let Some(attr_url) = comm_data.attr_url {
+            let client = reqwest::Client::new();
+
+            client
+                .post(&attr_url)
+                .json(&AuthResult {
+                    status: AuthStatus::Succes,
+                    attributes: Some(attributes.to_string()),
+                    session_url: None,
+                })
+                .send()
+                .await?;
+
+            Ok(StartCommResponse {
+                client_url: comm_data.client_url,
+                attr_url: None
+            })
+        } else {
+            Ok(StartCommResponse {
+                client_url: if comm_data.client_url.contains('?') {
+                    format!("{}&status=succes&attributes={}", comm_data.client_url, attributes)
+                } else {
+                    format!("{}?status=succes&attributes={}", comm_data.client_url, attributes)
+                },
+                attr_url: None,
+            })
+        }
+    }
+
     pub async fn start_with_attributes(
         &self,
         purpose: &Tag,
         attributes: &str,
     ) -> Result<StartCommResponse, reqwest::Error> {
+        if self.disable_attributes_at_start {
+            return self.start_with_attributes_fallback(purpose, attributes).await;
+        }
+
         let client = reqwest::Client::new();
 
         Ok(client
