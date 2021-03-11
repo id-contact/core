@@ -13,6 +13,8 @@ use std::env;
 
 #[launch]
 fn rocket() -> rocket::Rocket {
+    env_logger::init();
+
     let config_filename = env::var("IDC_CORE_CONFIG_FILE")
         .expect("No config file path defined, please set IDC_CORE_CONFIG_FILE");
 
