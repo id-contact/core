@@ -89,7 +89,7 @@ impl CommunicationMethod {
             .post(&format!("{}/start_communication", &self.start))
             .json(&StartCommRequest {
                 purpose: purpose.clone(),
-                attributes: None,
+                auth_result: None,
             })
             .send()
             .await?
@@ -100,7 +100,7 @@ impl CommunicationMethod {
     async fn start_with_attributes_fallback(
         &self,
         purpose: &Tag,
-        attributes: &str,
+        auth_result: &str,
     ) -> Result<StartCommResponse, reqwest::Error> {
         let comm_data = self.start(purpose).await?;
 
@@ -109,11 +109,8 @@ impl CommunicationMethod {
 
             client
                 .post(&attr_url)
-                .json(&AuthResult {
-                    status: AuthStatus::Succes,
-                    attributes: Some(attributes.to_string()),
-                    session_url: None,
-                })
+                .header("Content-Type", "application/jwt")
+                .body(auth_result.to_string())
                 .send()
                 .await?;
 
@@ -124,22 +121,22 @@ impl CommunicationMethod {
         } else {
             Ok(StartCommResponse {
                 client_url: if comm_data.client_url.contains('?') {
-                    format!("{}&status=succes&attributes={}", comm_data.client_url, attributes)
+                    format!("{}&status=succes&attributes={}", comm_data.client_url, auth_result)
                 } else {
-                    format!("{}?status=succes&attributes={}", comm_data.client_url, attributes)
+                    format!("{}?status=succes&attributes={}", comm_data.client_url, auth_result)
                 },
                 attr_url: None,
             })
         }
     }
 
-    pub async fn start_with_attributes(
+    pub async fn start_with_auth_result(
         &self,
         purpose: &Tag,
-        attributes: &str,
+        auth_result: &str,
     ) -> Result<StartCommResponse, reqwest::Error> {
         if self.disable_attributes_at_start {
-            return self.start_with_attributes_fallback(purpose, attributes).await;
+            return self.start_with_attributes_fallback(purpose, auth_result).await;
         }
 
         let client = reqwest::Client::new();
@@ -148,7 +145,7 @@ impl CommunicationMethod {
             .post(&format!("{}/start_communication", &self.start))
             .json(&StartCommRequest {
                 purpose: purpose.clone(),
-                attributes: Some(attributes.to_string()),
+                auth_result: Some(auth_result.to_string()),
             })
             .send()
             .await?

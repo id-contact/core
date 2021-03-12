@@ -14,7 +14,7 @@ pub struct StartRequestFull {
 #[derive(Debug, Deserialize)]
 pub struct StartRequestCommOnly {
     purpose: String,
-    attributes: String,
+    auth_result: String,
     comm_method: Tag,
 }
 
@@ -82,7 +82,7 @@ pub async fn start_session_comm_only(
 
     // Setup session
     let comm_data = comm_method
-        .start_with_attributes(&choices.purpose, &choices.attributes)
+        .start_with_auth_result(&choices.purpose, &choices.auth_result)
         .await?;
 
     Ok(Json(ClientUrlResponse {
