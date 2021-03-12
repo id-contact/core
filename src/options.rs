@@ -14,11 +14,21 @@ struct MethodProperties {
 }
 
 impl MethodProperties {
-    fn filter_methods_by_tags<'a, T: Method, I: Iterator<Item = &'a String>>(tags: I, methods: &HashMap<String, T>) -> Result<Vec<MethodProperties>, rocket::response::Debug<&'static str>> {
+    fn filter_methods_by_tags<'a, T: Method, I: Iterator<Item = &'a String>>(
+        tags: I,
+        methods: &HashMap<String, T>,
+    ) -> Result<Vec<MethodProperties>, rocket::response::Debug<&'static str>> {
         tags.map(|t| {
-            let method = methods.get(t).ok_or(rocket::response::Debug("Unknown method"))?;
-            Ok(MethodProperties{ tag: String::from(method.tag()), name: String::from(method.name()), image_path: String::from(method.image_path())})
-        }).collect()
+            let method = methods
+                .get(t)
+                .ok_or(rocket::response::Debug("Unknown method"))?;
+            Ok(MethodProperties {
+                tag: String::from(method.tag()),
+                name: String::from(method.name()),
+                image_path: String::from(method.image_path()),
+            })
+        })
+        .collect()
     }
 }
 
@@ -29,10 +39,22 @@ pub struct SessionOptions {
 }
 
 #[get("/session_options/<purpose>")]
-pub fn session_options(purpose: String, config: State<CoreConfig>) -> Result<Json<SessionOptions>, rocket::response::Debug<&'static str>> {
-    let purpose = config.purposes.get(&purpose).ok_or(rocket::response::Debug("unknown purpose"))?;
-    let auth_methods = MethodProperties::filter_methods_by_tags(purpose.allowed_auth.iter(), &config.auth_methods)?;
-    let comm_methods = MethodProperties::filter_methods_by_tags(purpose.allowed_comm.iter(), &config.comm_methods)?;
+pub fn session_options(
+    purpose: String,
+    config: State<CoreConfig>,
+) -> Result<Json<SessionOptions>, rocket::response::Debug<&'static str>> {
+    let purpose = config
+        .purposes
+        .get(&purpose)
+        .ok_or(rocket::response::Debug("unknown purpose"))?;
+    let auth_methods = MethodProperties::filter_methods_by_tags(
+        purpose.allowed_auth.iter(),
+        &config.auth_methods,
+    )?;
+    let comm_methods = MethodProperties::filter_methods_by_tags(
+        purpose.allowed_comm.iter(),
+        &config.comm_methods,
+    )?;
 
     Ok(Json(SessionOptions {
         auth_methods,

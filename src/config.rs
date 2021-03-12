@@ -1,4 +1,5 @@
-use crate::methods::{AuthenticationMethod, CommunicationMethod, Method};
+use crate::error::Error;
+use crate::methods::{AuthenticationMethod, CommunicationMethod, Method, Tag};
 use serde::Deserialize;
 use std::{collections::HashMap, fs};
 
@@ -25,7 +26,7 @@ pub struct CoreConfig {
     pub purposes: HashMap<String, Purpose>,
 }
 
-fn contains_wildcard(target: &Vec<String>) -> bool {
+fn contains_wildcard(target: &[String]) -> bool {
     for val in target {
         if val == "*" {
             return true;
@@ -34,7 +35,7 @@ fn contains_wildcard(target: &Vec<String>) -> bool {
     false
 }
 
-fn validate_methods<T>(target: &Vec<String>, options: &HashMap<String, T>) -> bool {
+fn validate_methods<T>(target: &[String], options: &HashMap<String, T>) -> bool {
     for val in target {
         if options.get(val).is_none() {
             return false;
@@ -46,9 +47,21 @@ fn validate_methods<T>(target: &Vec<String>, options: &HashMap<String, T>) -> bo
 impl From<RawCoreConfig> for CoreConfig {
     fn from(config: RawCoreConfig) -> Self {
         let mut config = CoreConfig {
-            auth_methods: config.auth_methods.iter().map(|m| { (m.tag().clone(), m.clone()) }).collect(),
-            comm_methods: config.comm_methods.iter().map(|m| { (m.tag().clone(), m.clone()) }).collect(),
-            purposes: config.purposes.iter().map(|m| { (m.tag.clone(), m.clone()) }).collect(),
+            auth_methods: config
+                .auth_methods
+                .iter()
+                .map(|m| (m.tag().clone(), m.clone()))
+                .collect(),
+            comm_methods: config
+                .comm_methods
+                .iter()
+                .map(|m| (m.tag().clone(), m.clone()))
+                .collect(),
+            purposes: config
+                .purposes
+                .iter()
+                .map(|m| (m.tag.clone(), m.clone()))
+                .collect(),
         };
 
         // Handle wildcards in purpose auth and comm method lists
@@ -84,5 +97,42 @@ impl CoreConfig {
             .unwrap_or_else(|e| panic!("Error parsing the config file {}: {:?}", filename, e));
 
         config
+    }
+}
+
+impl CoreConfig {
+    pub fn purpose(&self, purpose: &Tag) -> Result<&Purpose, Error> {
+        Ok(self
+            .purposes
+            .get(purpose)
+            .ok_or_else(|| Error::NoSuchPurpose(purpose.to_string()))?)
+    }
+
+    pub fn comm_method(
+        &self,
+        purpose: &Purpose,
+        comm_method: &Tag,
+    ) -> Result<&CommunicationMethod, Error> {
+        if !purpose.allowed_comm.contains(comm_method) {
+            return Err(Error::NoSuchMethod(comm_method.to_string()));
+        }
+        Ok(self
+            .comm_methods
+            .get(comm_method)
+            .ok_or_else(|| Error::NoSuchMethod(comm_method.to_string()))?)
+    }
+
+    pub fn auth_method(
+        &self,
+        purpose: &Purpose,
+        auth_method: &Tag,
+    ) -> Result<&AuthenticationMethod, Error> {
+        if !purpose.allowed_auth.contains(auth_method) {
+            return Err(Error::NoSuchMethod(auth_method.to_string()));
+        }
+        Ok(self
+            .auth_methods
+            .get(auth_method)
+            .ok_or_else(|| Error::NoSuchMethod(auth_method.to_string()))?)
     }
 }
