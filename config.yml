@@ -1,3 +1,6 @@
+server_url: http://core:8000
+internal_secret: sample_secret
+
 auth_methods:
   - tag: irma
     name: Gebruik je IRMA app

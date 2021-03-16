@@ -8,6 +8,7 @@ mod start;
 extern crate rocket;
 
 use config::CoreConfig;
+use methods::auth_attr_shim;
 use options::session_options;
 use start::{session_start_auth_only, session_start_full, start_session_comm_only};
 use std::env;
@@ -27,7 +28,8 @@ fn rocket() -> rocket::Rocket {
                 session_options,
                 session_start_full,
                 session_start_auth_only,
-                start_session_comm_only
+                start_session_comm_only,
+                auth_attr_shim,
             ],
         )
 }

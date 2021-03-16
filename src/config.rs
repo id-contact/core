@@ -1,5 +1,12 @@
 use crate::error::Error;
 use crate::methods::{AuthenticationMethod, CommunicationMethod, Method, Tag};
+use josekit::{
+    jws::{
+        alg::hmac::{HmacJwsAlgorithm::Hs256, HmacJwsSigner, HmacJwsVerifier},
+        JwsHeader,
+    },
+    jwt::{self, JwtPayload},
+};
 use serde::Deserialize;
 use std::{collections::HashMap, fs};
 
@@ -16,6 +23,8 @@ struct RawCoreConfig {
     auth_methods: Vec<AuthenticationMethod>,
     comm_methods: Vec<CommunicationMethod>,
     purposes: Vec<Purpose>,
+    internal_secret: String,
+    server_url: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -24,6 +33,9 @@ pub struct CoreConfig {
     pub auth_methods: HashMap<String, AuthenticationMethod>,
     pub comm_methods: HashMap<String, CommunicationMethod>,
     pub purposes: HashMap<String, Purpose>,
+    internal_signer: HmacJwsSigner,
+    internal_verifier: HmacJwsVerifier,
+    server_url: String,
 }
 
 fn contains_wildcard(target: &[String]) -> bool {
@@ -62,6 +74,17 @@ impl From<RawCoreConfig> for CoreConfig {
                 .iter()
                 .map(|m| (m.tag.clone(), m.clone()))
                 .collect(),
+            internal_signer: Hs256
+                .signer_from_bytes(config.internal_secret.as_bytes())
+                .unwrap_or_else(|e| {
+                    panic!("Could not generate signer from internal secret: {}", e)
+                }),
+            internal_verifier: Hs256
+                .verifier_from_bytes(config.internal_secret.as_bytes())
+                .unwrap_or_else(|e| {
+                    panic!("Could not generate verifier from internal secret: {}", e)
+                }),
+            server_url: config.server_url,
         };
 
         // Handle wildcards in purpose auth and comm method lists
@@ -134,5 +157,38 @@ impl CoreConfig {
             .auth_methods
             .get(auth_method)
             .ok_or_else(|| Error::NoSuchMethod(auth_method.to_string()))?)
+    }
+
+    pub fn encode_urlstate(&self, state: HashMap<String, String>) -> Result<String, Error> {
+        let mut payload = JwtPayload::new();
+
+        payload.set_issued_at(&std::time::SystemTime::now());
+        payload.set_expires_at(
+            &(std::time::SystemTime::now() + std::time::Duration::from_secs(30 * 60)),
+        );
+        for (k, v) in state.iter() {
+            payload.set_claim(k, Some(serde_json::to_value(v)?))?;
+        }
+
+        Ok(jwt::encode_with_signer(
+            &payload,
+            &JwsHeader::new(),
+            &self.internal_signer,
+        )?)
+    }
+
+    pub fn decode_urlstate(&self, urlstate: String) -> Result<HashMap<String, String>, Error> {
+        let (payload, _) = jwt::decode_with_verifier(urlstate, &self.internal_verifier)?;
+
+        let mut result = HashMap::new();
+        for (k, v) in payload.claims_set().iter() {
+            result.insert(k.to_string(), serde_json::from_value::<String>(v.clone())?);
+        }
+
+        Ok(result)
+    }
+
+    pub fn server_url(&self) -> &str {
+        &self.server_url
     }
 }

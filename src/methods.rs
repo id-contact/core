@@ -1,7 +1,7 @@
 mod auth;
 mod comm;
 
-pub use auth::AuthenticationMethod;
+pub use auth::{auth_attr_shim, AuthenticationMethod};
 pub use comm::CommunicationMethod;
 
 pub type Tag = String;
