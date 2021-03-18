@@ -48,6 +48,7 @@ pub async fn session_start_full(
             &purpose.attributes,
             &comm_data.client_url,
             &comm_data.attr_url,
+            &config,
         )
         .await?;
 
@@ -65,7 +66,12 @@ pub async fn session_start_auth_only(
 
     // Setup session
     let client_url = auth_method
-        .start(&purpose.attributes, &choices.comm_url, &choices.attr_url)
+        .start(
+            &purpose.attributes,
+            &choices.comm_url,
+            &choices.attr_url,
+            &config,
+        )
         .await?;
 
     Ok(Json(ClientUrlResponse { client_url }))
