@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use crate::config::CoreConfig;
 use crate::methods::{Method, Tag};
+use crate::{config::CoreConfig, error::Error};
 use rocket::State;
 use rocket_contrib::json::Json;
 use serde::Serialize;
@@ -17,11 +17,11 @@ impl MethodProperties {
     fn filter_methods_by_tags<'a, T: Method, I: Iterator<Item = &'a String>>(
         tags: I,
         methods: &HashMap<String, T>,
-    ) -> Result<Vec<MethodProperties>, rocket::response::Debug<&'static str>> {
+    ) -> Result<Vec<MethodProperties>, Error> {
         tags.map(|t| {
             let method = methods
                 .get(t)
-                .ok_or(rocket::response::Debug("Unknown method"))?;
+                .ok_or_else(|| Error::NoSuchMethod(t.clone()))?;
             Ok(MethodProperties {
                 tag: String::from(method.tag()),
                 name: String::from(method.name()),
@@ -42,11 +42,11 @@ pub struct SessionOptions {
 pub fn session_options(
     purpose: String,
     config: State<CoreConfig>,
-) -> Result<Json<SessionOptions>, rocket::response::Debug<&'static str>> {
+) -> Result<Json<SessionOptions>, Error> {
     let purpose = config
         .purposes
         .get(&purpose)
-        .ok_or(rocket::response::Debug("unknown purpose"))?;
+        .ok_or_else(|| Error::NoSuchPurpose(purpose.clone()))?;
     let auth_methods = MethodProperties::filter_methods_by_tags(
         purpose.allowed_auth.iter(),
         &config.auth_methods,
