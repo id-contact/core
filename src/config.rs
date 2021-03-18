@@ -5,7 +5,7 @@ use josekit::{
         alg::hmac::{HmacJwsAlgorithm::Hs256, HmacJwsSigner, HmacJwsVerifier},
         JwsHeader,
     },
-    jwt::{self, JwtPayload},
+    jwt::{self, JwtPayload, JwtPayloadValidator},
 };
 use serde::Deserialize;
 use std::{collections::HashMap, fs};
@@ -181,6 +181,10 @@ impl CoreConfig {
 
     pub fn decode_urlstate(&self, urlstate: String) -> Result<HashMap<String, String>, Error> {
         let (payload, _) = jwt::decode_with_verifier(urlstate, &self.internal_verifier)?;
+
+        let mut validator = JwtPayloadValidator::new();
+        validator.set_base_time(std::time::SystemTime::now());
+        validator.validate(&payload)?;
 
         let mut result = HashMap::new();
         for (k, v) in payload.claims_set().iter() {
