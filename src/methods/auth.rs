@@ -49,6 +49,7 @@ impl AuthenticationMethod {
             })
             .send()
             .await?
+            .error_for_status()?
             .json::<StartAuthResponse>()
             .await?
             .client_url)
@@ -79,6 +80,7 @@ impl AuthenticationMethod {
             })
             .send()
             .await?
+            .error_for_status()?
             .json::<StartAuthResponse>()
             .await?
             .client_url)

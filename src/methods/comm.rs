@@ -109,6 +109,7 @@ impl CommunicationMethod {
             })
             .send()
             .await?
+            .error_for_status()?
             .json::<StartCommResponse>()
             .await?)
     }
