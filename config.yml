@@ -1,5 +1,5 @@
 server_url: http://core:8000
-internal_secret: sample_secret
+internal_secret: sample_secret_12345678901234567890
 
 auth_methods:
   - tag: irma

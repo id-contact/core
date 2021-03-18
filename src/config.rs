@@ -116,14 +116,16 @@ impl CoreConfig {
         let contents = fs::read_to_string(filename)
             .unwrap_or_else(|_| panic!("Could not read the config file {}", filename));
 
+        CoreConfig::from_str(&contents)
+    }
+
+    pub fn from_str(contents: &str) -> CoreConfig {
         let config: CoreConfig = serde_yaml::from_str(&contents)
-            .unwrap_or_else(|e| panic!("Error parsing the config file {}: {:?}", filename, e));
+            .unwrap_or_else(|e| panic!("Error parsing the config file: {:?}", e));
 
         config
     }
-}
 
-impl CoreConfig {
     pub fn purpose(&self, purpose: &Tag) -> Result<&Purpose, Error> {
         Ok(self
             .purposes
@@ -182,6 +184,9 @@ impl CoreConfig {
 
         let mut result = HashMap::new();
         for (k, v) in payload.claims_set().iter() {
+            if k == "exp" || k == "iat" {
+                continue;
+            }
             result.insert(k.to_string(), serde_json::from_value::<String>(v.clone())?);
         }
 
@@ -190,5 +195,316 @@ impl CoreConfig {
 
     pub fn server_url(&self) -> &str {
         &self.server_url
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use super::CoreConfig;
+    use crate::methods::Method;
+
+    // Test data
+    const TEST_CONFIG_VALID: &'static str = r#"
+server_url: http://core:8000
+internal_secret: sample_secret_1234567890178901237890
+
+auth_methods:
+  - tag: irma
+    name: Gebruik je IRMA app
+    image_path: /static/irma.svg
+    start: http://auth-irma:8000
+  - tag: digid
+    name: Gebruik DigiD
+    image_path: /static/digid.svg
+    start: http://auth-test:8000
+
+comm_methods:
+  - tag: call
+    name: Bellen
+    image_path: /static/phone.svg
+    start: http://comm-test:8000
+  - tag: chat
+    name: Chatten
+    image_path: /static/chat.svg
+    start: http://comm-matrix-bot:3000
+
+purposes:
+  - tag: report_move
+    attributes:
+      - email
+    allowed_auth:
+      - "*"
+    allowed_comm:
+      - call
+      - chat
+  - tag: request_permit
+    attributes:
+      - email
+    allowed_auth:
+      - irma
+      - digid
+    allowed_comm:
+      - "*"
+  - tag: request_passport
+    attributes:
+      - email
+    allowed_auth:
+      - irma
+    allowed_comm:
+      - call
+
+"#;
+    const TEST_CONFIG_INVALID_METHOD_COMM: &'static str = r#"
+server_url: http://core:8000
+internal_secret: sample_secret_1234567890178901237890
+
+auth_methods:
+  - tag: irma
+    name: Gebruik je IRMA app
+    image_path: /static/irma.svg
+    start: http://auth-irma:8000
+  - tag: digid
+    name: Gebruik DigiD
+    image_path: /static/digid.svg
+    start: http://auth-test:8000
+
+comm_methods:
+  - tag: call
+    name: Bellen
+    image_path: /static/phone.svg
+    start: http://comm-test:8000
+  - tag: chat
+    name: Chatten
+    image_path: /static/chat.svg
+    start: http://comm-matrix-bot:3000
+
+purposes:
+  - tag: report_move
+    attributes:
+      - email
+    allowed_auth:
+      - "*"
+    allowed_comm:
+      - call
+      - chat
+      - does_not_exist
+  - tag: request_permit
+    attributes:
+      - email
+    allowed_auth:
+      - irma
+      - digid
+    allowed_comm:
+      - "*"
+  - tag: request_passport
+    attributes:
+      - email
+    allowed_auth:
+      - "*"
+    allowed_comm:
+      - call
+
+"#;
+    const TEST_CONFIG_INVALID_METHOD_AUTH: &'static str = r#"
+server_url: http://core:8000
+internal_secret: sample_secret_1234567890178901237890
+
+auth_methods:
+  - tag: irma
+    name: Gebruik je IRMA app
+    image_path: /static/irma.svg
+    start: http://auth-irma:8000
+  - tag: digid
+    name: Gebruik DigiD
+    image_path: /static/digid.svg
+    start: http://auth-test:8000
+
+comm_methods:
+  - tag: call
+    name: Bellen
+    image_path: /static/phone.svg
+    start: http://comm-test:8000
+  - tag: chat
+    name: Chatten
+    image_path: /static/chat.svg
+    start: http://comm-matrix-bot:3000
+
+purposes:
+  - tag: report_move
+    attributes:
+      - email
+    allowed_auth:
+      - "*"
+    allowed_comm:
+      - call
+      - chat
+  - tag: request_permit
+    attributes:
+      - email
+    allowed_auth:
+      - irma
+      - digid
+      - does_not_exist
+    allowed_comm:
+      - "*"
+  - tag: request_passport
+    attributes:
+      - email
+    allowed_auth:
+      - "*"
+    allowed_comm:
+      - call
+
+"#;
+
+    #[test]
+    fn test_wildcard_expansion() {
+        let config = CoreConfig::from_str(TEST_CONFIG_VALID);
+
+        let mut test_auth = config.purposes["report_move"].allowed_auth.clone();
+        test_auth.sort();
+        assert_eq!(test_auth, vec!["digid", "irma"]);
+
+        let mut test_auth = config.purposes["request_permit"].allowed_auth.clone();
+        test_auth.sort();
+        assert_eq!(test_auth, vec!["digid", "irma"]);
+
+        let mut test_auth = config.purposes["request_passport"].allowed_auth.clone();
+        test_auth.sort();
+        assert_eq!(test_auth, vec!["irma"]);
+
+        let mut test_comm = config.purposes["report_move"].allowed_comm.clone();
+        test_comm.sort();
+        assert_eq!(test_comm, vec!["call", "chat"]);
+
+        let mut test_comm = config.purposes["request_permit"].allowed_comm.clone();
+        test_comm.sort();
+        assert_eq!(test_comm, vec!["call", "chat"]);
+
+        let mut test_comm = config.purposes["request_passport"].allowed_comm.clone();
+        test_comm.sort();
+        assert_eq!(test_comm, vec!["call"]);
+    }
+
+    #[test]
+    fn test_sample_config() {
+        let _config = CoreConfig::from_file(&format!("{}/config.yml", env!("CARGO_MANIFEST_DIR")));
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_invalid_auth() {
+        let _config = CoreConfig::from_str(TEST_CONFIG_INVALID_METHOD_AUTH);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_invalid_comm() {
+        let _config = CoreConfig::from_str(TEST_CONFIG_INVALID_METHOD_COMM);
+    }
+
+    #[test]
+    fn test_get_purpose() {
+        let config = CoreConfig::from_str(TEST_CONFIG_VALID);
+        assert_eq!(
+            config.purpose(&"report_move".to_string()).unwrap().tag,
+            "report_move"
+        );
+        assert!(config.purpose(&"does_not_exist".to_string()).is_err());
+    }
+
+    #[test]
+    fn test_get_comm_method() {
+        let config = CoreConfig::from_str(TEST_CONFIG_VALID);
+
+        let purpose_report_move = config.purpose(&"report_move".to_string()).unwrap();
+        let purpose_request_passport = config.purpose(&"request_passport".to_string()).unwrap();
+
+        assert_eq!(
+            config
+                .comm_method(purpose_report_move, &"call".to_string())
+                .unwrap()
+                .tag(),
+            "call"
+        );
+        assert_eq!(
+            config
+                .comm_method(purpose_report_move, &"chat".to_string())
+                .unwrap()
+                .tag(),
+            "chat"
+        );
+        assert!(config
+            .comm_method(purpose_report_move, &"does-not-exist".to_string())
+            .is_err());
+
+        assert_eq!(
+            config
+                .comm_method(purpose_request_passport, &"call".to_string())
+                .unwrap()
+                .tag(),
+            "call"
+        );
+        assert!(config
+            .comm_method(purpose_request_passport, &"chat".to_string())
+            .is_err());
+    }
+
+    #[test]
+    fn test_get_auth_method() {
+        let config = CoreConfig::from_str(TEST_CONFIG_VALID);
+
+        let purpose_report_move = config.purpose(&"report_move".to_string()).unwrap();
+        let purpose_request_passport = config.purpose(&"request_passport".to_string()).unwrap();
+
+        assert_eq!(
+            config
+                .auth_method(purpose_report_move, &"digid".to_string())
+                .unwrap()
+                .tag(),
+            "digid"
+        );
+        assert_eq!(
+            config
+                .auth_method(purpose_report_move, &"irma".to_string())
+                .unwrap()
+                .tag(),
+            "irma"
+        );
+        assert!(config
+            .auth_method(purpose_report_move, &"does-not-exist".to_string())
+            .is_err());
+
+        assert_eq!(
+            config
+                .auth_method(purpose_request_passport, &"irma".to_string())
+                .unwrap()
+                .tag(),
+            "irma"
+        );
+        assert!(config
+            .auth_method(purpose_request_passport, &"digid".to_string())
+            .is_err());
+    }
+
+    #[test]
+    fn test_urlstate() {
+        let config = CoreConfig::from_str(TEST_CONFIG_VALID);
+
+        let mut test_map = HashMap::new();
+
+        test_map.insert("key_1".to_string(), "value_1".to_string());
+        test_map.insert("key_2".to_string(), "value_2".to_string());
+
+        let encoded = config.encode_urlstate(test_map.clone()).unwrap();
+        assert_eq!(config.decode_urlstate(encoded).unwrap(), test_map);
+
+        const EXPIRED_JWT: &'static str = "eyJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE2MTYwNjAzODEsImV4cCI6MTYxNjA2MjE4MSwia2V5XzEiOiJ2YWx1ZV8xIiwia2V5XzIiOiJ2YWx1ZV8yIn0.S8YcM93jDJswxGxvmIE763KhabUqODUFX1qr7NFBh30";
+        assert!(config.decode_urlstate(EXPIRED_JWT.to_string()).is_err());
+
+        const INVALID_JWT: &'static str = "eyJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE2MTYwNjAzODEsImV4cCI6MTYxNjA2MjE4MSwia2V5XzEiOiJ2YWx1ZV8xIiwia2V5XzIiOiJ2YWx1ZV8yIn0.F8YcM93jDJswxGxvmIE763KhabUqODUFX1qr7NFBh30";
+        assert!(config.decode_urlstate(INVALID_JWT.to_string()).is_err());
     }
 }
