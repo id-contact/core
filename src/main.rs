@@ -14,22 +14,24 @@ use start::{session_start_auth_only, session_start_full, start_session_comm_only
 use std::env;
 
 #[launch]
-fn rocket() -> rocket::Rocket {
+fn boot() -> rocket::Rocket {
     env_logger::init();
 
     let config_filename = env::var("IDC_CORE_CONFIG_FILE")
         .expect("No config file path defined, please set IDC_CORE_CONFIG_FILE");
 
-    rocket::ignite()
-        .manage(CoreConfig::from_file(&config_filename))
-        .mount(
-            "/",
-            routes![
-                session_options,
-                session_start_full,
-                session_start_auth_only,
-                start_session_comm_only,
-                auth_attr_shim,
-            ],
-        )
+    rocket(CoreConfig::from_file(&config_filename))
+}
+
+fn rocket(config: CoreConfig) -> rocket::Rocket {
+    rocket::ignite().manage(config).mount(
+        "/",
+        routes![
+            session_options,
+            session_start_full,
+            session_start_auth_only,
+            start_session_comm_only,
+            auth_attr_shim,
+        ],
+    )
 }
