@@ -71,7 +71,8 @@ mod tests {
     use crate::rocket;
 
     const TEST_CONFIG_VALID: &'static str = r#"
-server_url: http://core:8000
+server_url: https://core.idcontact.test.tweede.golf
+internal_url: http://core:8000
 internal_secret: sample_secret_1234567890178901237890
 
 auth_methods:

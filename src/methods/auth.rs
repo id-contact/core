@@ -20,6 +20,8 @@ pub struct AuthenticationMethod {
     start: String,
     #[serde(default = "default_as_false")]
     disable_attr_url: bool,
+    #[serde(default = "default_as_false")]
+    shim_tel_url: bool,
 }
 
 impl AuthenticationMethod {
@@ -30,6 +32,7 @@ impl AuthenticationMethod {
         attr_url: &Option<String>,
         config: &CoreConfig,
     ) -> Result<String, Error> {
+        let continuation = self.parse_continuation(continuation, config);
         if let Some(attr_url) = attr_url {
             if self.disable_attr_url {
                 return self
@@ -44,7 +47,7 @@ impl AuthenticationMethod {
             .post(&format!("{}/start_authentication", self.start))
             .json(&StartAuthRequest {
                 attributes: attributes.clone(),
-                continuation: continuation.to_string(),
+                continuation: continuation,
                 attr_url: attr_url.clone(),
             })
             .send()
@@ -56,10 +59,10 @@ impl AuthenticationMethod {
     }
 
     // Start session using fallback shim for attribute url handling
-    pub async fn start_fallback(
+    async fn start_fallback(
         &self,
         attributes: &Vec<String>,
-        continuation: &str,
+        continuation: String,
         attr_url: &str,
         config: &CoreConfig,
     ) -> Result<String, Error> {
@@ -75,7 +78,7 @@ impl AuthenticationMethod {
             .post(&format!("{}/start_authentication", self.start))
             .json(&StartAuthRequest {
                 attributes: attributes.clone(),
-                continuation: format!("{}/auth_attr_shim/{}", config.server_url(), state),
+                continuation: format!("{}/auth_attr_shim/{}", config.internal_url(), state),
                 attr_url: None,
             })
             .send()
@@ -84,6 +87,14 @@ impl AuthenticationMethod {
             .json::<StartAuthResponse>()
             .await?
             .client_url)
+    }
+
+    fn parse_continuation(&self, continuation: &str, config: &CoreConfig) -> String {
+        if continuation.starts_with("tel:") && self.shim_tel_url {
+            format!("{}/shim/tel.html?{}", config.server_url(), urlencoding::encode(continuation))
+        } else {
+            continuation.to_string()
+        }
     }
 }
 
