@@ -1,4 +1,5 @@
-server_url: http://core:8000
+server_url: https://core.idcontact.test.tweede.golf
+internal_url: http://core:8000
 internal_secret: sample_secret_12345678901234567890
 
 auth_methods:
@@ -9,6 +10,7 @@ auth_methods:
   - tag: digid
     name: Gebruik DigiD
     image_path: /static/digid.svg
+    shim_tel_url: true
     start: http://auth-test:8000
 
 comm_methods:

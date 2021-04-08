@@ -25,6 +25,7 @@ struct RawCoreConfig {
     purposes: Vec<Purpose>,
     internal_secret: String,
     server_url: String,
+    internal_url: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -36,6 +37,7 @@ pub struct CoreConfig {
     internal_signer: HmacJwsSigner,
     internal_verifier: HmacJwsVerifier,
     server_url: String,
+    internal_url: String,
 }
 
 fn contains_wildcard(target: &[String]) -> bool {
@@ -84,6 +86,7 @@ impl From<RawCoreConfig> for CoreConfig {
                 .unwrap_or_else(|e| {
                     panic!("Could not generate verifier from internal secret: {}", e)
                 }),
+            internal_url: config.internal_url,
             server_url: config.server_url,
         };
 
@@ -200,6 +203,10 @@ impl CoreConfig {
     pub fn server_url(&self) -> &str {
         &self.server_url
     }
+
+    pub fn internal_url(&self) -> &str {
+        &self.internal_url
+    }
 }
 
 #[cfg(test)]
@@ -211,7 +218,8 @@ mod tests {
 
     // Test data
     const TEST_CONFIG_VALID: &'static str = r#"
-server_url: http://core:8000
+server_url: https://core.idcontact.test.tweede.golf
+internal_url: http://core:8000
 internal_secret: sample_secret_1234567890178901237890
 
 auth_methods:
@@ -261,7 +269,8 @@ purposes:
 
 "#;
     const TEST_CONFIG_INVALID_METHOD_COMM: &'static str = r#"
-server_url: http://core:8000
+server_url: https://core.idcontact.test.tweede.golf
+internal_url: http://core:8000
 internal_secret: sample_secret_1234567890178901237890
 
 auth_methods:
@@ -312,7 +321,8 @@ purposes:
 
 "#;
     const TEST_CONFIG_INVALID_METHOD_AUTH: &'static str = r#"
-server_url: http://core:8000
+server_url: https://core.idcontact.test.tweede.golf
+internal_url: http://core:8000
 internal_secret: sample_secret_1234567890178901237890
 
 auth_methods:
