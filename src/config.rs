@@ -26,6 +26,7 @@ struct RawCoreConfig {
     internal_secret: String,
     server_url: String,
     internal_url: String,
+    sentry_dsn: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -38,6 +39,7 @@ pub struct CoreConfig {
     internal_verifier: HmacJwsVerifier,
     server_url: String,
     internal_url: String,
+    sentry_dsn: Option<String>,
 }
 
 fn contains_wildcard(target: &[String]) -> bool {
@@ -88,6 +90,7 @@ impl From<RawCoreConfig> for CoreConfig {
                 }),
             internal_url: config.internal_url,
             server_url: config.server_url,
+            sentry_dsn: config.sentry_dsn,
         };
 
         // Handle wildcards in purpose auth and comm method lists
@@ -206,6 +209,10 @@ impl CoreConfig {
 
     pub fn internal_url(&self) -> &str {
         &self.internal_url
+    }
+
+    pub fn sentry_dsn(&self) -> Option<&str> {
+        self.sentry_dsn.as_deref()
     }
 }
 
