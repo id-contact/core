@@ -33,12 +33,12 @@ impl<'r, 'o: 'r> rocket::response::Responder<'r, 'o> for Error {
         match self {
             Error::NoSuchMethod(m) => {
                 let bad_request = rocket::response::status::BadRequest::<()>(None);
-                println!("Unknown method {}", m);
+                log::error!("Unknown method {}", m);
                 bad_request.respond_to(request)
             }
             Error::NoSuchPurpose(m) => {
                 let bad_request = rocket::response::status::BadRequest::<()>(None);
-                println!("Unknown purpose {}", m);
+                log::error!("Unknown purpose {}", m);
                 bad_request.respond_to(request)
             }
             Error::BadRequest => {

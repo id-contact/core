@@ -91,7 +91,11 @@ impl AuthenticationMethod {
 
     fn parse_continuation(&self, continuation: &str, config: &CoreConfig) -> String {
         if continuation.starts_with("tel:") && self.shim_tel_url {
-            format!("{}/shim/tel.html?{}", config.server_url(), urlencoding::encode(continuation))
+            format!(
+                "{}/shim/tel.html?{}",
+                config.server_url(),
+                urlencoding::encode(continuation)
+            )
         } else {
             continuation.to_string()
         }
