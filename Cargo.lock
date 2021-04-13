@@ -299,13 +299,14 @@ dependencies = [
 
 [[package]]
 name = "figment"
-version = "0.10.3"
+version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c38799b106530aa30f774f7fca6d8f7e5f6234a79f427c4fad3c975eaf678931"
+checksum = "0ca029e813a72b7526d28273d25f3e4a2f365d1b7a1018a6f93ec9053a119763"
 dependencies = [
  "atomic",
  "pear",
  "serde",
+ "serde_json",
  "toml",
  "uncased",
  "version_check",
@@ -689,6 +690,7 @@ name = "id-contact-core"
 version = "0.1.0"
 dependencies = [
  "env_logger",
+ "figment",
  "id-contact-proto",
  "josekit",
  "log",

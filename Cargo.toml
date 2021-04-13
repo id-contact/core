@@ -18,3 +18,5 @@ serde_json = "1.0"
 serde_yaml = "0.8.16"
 urlencoding = "1.1.1"
 
+[dev-dependencies]
+figment = { version = "0.10.5", features = ["env", "toml", "json"] }

@@ -1,0 +1,50 @@
+[global]
+server_url = "https://core.idcontact.test.tweede.golf"
+internal_url = "http://core:8000"
+internal_secret = "sample_secret_12345678901234567890"
+
+
+[[global.auth_methods]]
+tag = "irma"
+name = "Gebruik je IRMA app"
+image_path = "/static/irma.svg"
+start = "http://auth-irma:8000"
+
+[[global.auth_methods]]
+tag = "digid"
+name = "Gebruik DigiD"
+image_path = "/static/digid.svg"
+shim_tel_url = true
+start = "http://auth-test:8000"
+
+
+[[global.comm_methods]]
+tag = "call"
+name = "Bellen"
+image_path = "/static/phone.svg"
+start = "http://comm-test:8000"
+
+[[global.comm_methods]]
+tag = "chat"
+name = "Chatten"
+image_path = "/static/chat.svg"
+start = "http://comm-matrix-bot:3000"
+
+
+[[global.purposes]]
+tag = "report_move"
+attributes = [ "email" ]
+allowed_auth = [ "*" ]
+allowed_comm = [ "call", "chat" ]
+
+[[global.purposes]]
+tag = "request_permit"
+attributes = [ "email" ]
+allowed_auth = [ "irma", "digid" ]
+allowed_comm = [ "*" ]
+
+[[global.purposes]]
+tag = "request_passport"
+attributes = [ "email" ]
+allowed_auth = [ "*" ]
+allowed_comm = [ "call" ]

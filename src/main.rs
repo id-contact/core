@@ -11,8 +11,8 @@ extern crate rocket;
 use config::CoreConfig;
 use methods::auth_attr_shim;
 use options::session_options;
+use rocket::fairing::AdHoc;
 use start::{session_start_auth_only, session_start_full, start_session_comm_only};
-use std::env;
 
 #[launch]
 fn boot() -> rocket::Rocket {
@@ -21,16 +21,19 @@ fn boot() -> rocket::Rocket {
     ))))
     .expect("failure to setup loggin");
 
-    let config_filename = env::var("IDC_CORE_CONFIG_FILE")
-        .expect("No config file path defined, please set IDC_CORE_CONFIG_FILE");
-
-    rocket(CoreConfig::from_file(&config_filename))
+    let base = setup_routes(rocket::ignite());
+    let config = base
+        .figment()
+        .extract::<CoreConfig>()
+        .expect("Could not parse configuration");
+    match config.sentry_dsn() {
+        Some(dsn) => base.attach(sentry::SentryFairing::new(dsn)),
+        None => base,
+    }
 }
 
-fn rocket(config: CoreConfig) -> rocket::Rocket {
-    let sentry_fairing = config.sentry_dsn().map(|dsn| sentry::SentryFairing::new(dsn));
-
-    let base = rocket::ignite().manage(config).mount(
+fn setup_routes(base: rocket::Rocket) -> rocket::Rocket {
+    base.mount(
         "/",
         routes![
             session_options,
@@ -39,10 +42,6 @@ fn rocket(config: CoreConfig) -> rocket::Rocket {
             start_session_comm_only,
             auth_attr_shim,
         ],
-    );
-
-    match sentry_fairing {
-        Some(sentry) => base.attach(sentry),
-        None => base,
-    }
+    )
+    .attach(AdHoc::config::<CoreConfig>())
 }
