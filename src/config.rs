@@ -8,7 +8,7 @@ use josekit::{
     jwt::{self, JwtPayload, JwtPayloadValidator},
 };
 use serde::Deserialize;
-use std::{collections::HashMap, fs};
+use std::collections::HashMap;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Purpose {
@@ -118,20 +118,6 @@ impl From<RawCoreConfig> for CoreConfig {
 }
 
 impl CoreConfig {
-    pub fn from_file(filename: &str) -> CoreConfig {
-        let contents = fs::read_to_string(filename)
-            .unwrap_or_else(|_| panic!("Could not read the config file {}", filename));
-
-        CoreConfig::from_str(&contents)
-    }
-
-    pub fn from_str(contents: &str) -> CoreConfig {
-        let config: CoreConfig = serde_yaml::from_str(&contents)
-            .unwrap_or_else(|e| panic!("Error parsing the config file: {:?}", e));
-
-        config
-    }
-
     pub fn purpose(&self, purpose: &Tag) -> Result<&Purpose, Error> {
         Ok(self
             .purposes
@@ -220,169 +206,180 @@ impl CoreConfig {
 mod tests {
     use std::collections::HashMap;
 
+    use figment::providers::{Format, Toml};
+    use rocket::figment::Figment;
+
     use super::CoreConfig;
     use crate::methods::Method;
 
     // Test data
     const TEST_CONFIG_VALID: &'static str = r#"
-server_url: https://core.idcontact.test.tweede.golf
-internal_url: http://core:8000
-internal_secret: sample_secret_1234567890178901237890
+[global]
+server_url = "https://core.idcontact.test.tweede.golf"
+internal_url = "http://core:8000"
+internal_secret = "sample_secret_1234567890178901237890"
 
-auth_methods:
-  - tag: irma
-    name: Gebruik je IRMA app
-    image_path: /static/irma.svg
-    start: http://auth-irma:8000
-  - tag: digid
-    name: Gebruik DigiD
-    image_path: /static/digid.svg
-    start: http://auth-test:8000
 
-comm_methods:
-  - tag: call
-    name: Bellen
-    image_path: /static/phone.svg
-    start: http://comm-test:8000
-  - tag: chat
-    name: Chatten
-    image_path: /static/chat.svg
-    start: http://comm-matrix-bot:3000
+[[global.auth_methods]]
+tag = "irma"
+name = "Gebruik je IRMA app"
+image_path = "/static/irma.svg"
+start = "http://auth-irma:8000"
 
-purposes:
-  - tag: report_move
-    attributes:
-      - email
-    allowed_auth:
-      - "*"
-    allowed_comm:
-      - call
-      - chat
-  - tag: request_permit
-    attributes:
-      - email
-    allowed_auth:
-      - irma
-      - digid
-    allowed_comm:
-      - "*"
-  - tag: request_passport
-    attributes:
-      - email
-    allowed_auth:
-      - irma
-    allowed_comm:
-      - call
+[[global.auth_methods]]
+tag = "digid"
+name = "Gebruik DigiD"
+image_path = "/static/digid.svg"
+start = "http://auth-test:8000"
+
+
+[[global.comm_methods]]
+tag = "call"
+name = "Bellen"
+image_path = "/static/phone.svg"
+start = "http://comm-test:8000"
+
+[[global.comm_methods]]
+tag = "chat"
+name = "Chatten"
+image_path = "/static/chat.svg"
+start = "http://comm-matrix-bot:3000"
+
+
+[[global.purposes]]
+tag = "report_move"
+attributes = [ "email" ]
+allowed_auth = [ "*" ]
+allowed_comm = [ "call", "chat" ]
+
+[[global.purposes]]
+tag = "request_permit"
+attributes = [ "email" ]
+allowed_auth = [ "irma", "digid" ]
+allowed_comm = [ "*" ]
+
+[[global.purposes]]
+tag = "request_passport"
+attributes = [ "email" ]
+allowed_auth = [ "irma" ]
+allowed_comm = [ "call" ]
 
 "#;
     const TEST_CONFIG_INVALID_METHOD_COMM: &'static str = r#"
-server_url: https://core.idcontact.test.tweede.golf
-internal_url: http://core:8000
-internal_secret: sample_secret_1234567890178901237890
+[global]
+server_url = "https://core.idcontact.test.tweede.golf"
+internal_url = "http://core:8000"
+internal_secret = "sample_secret_1234567890178901237890"
 
-auth_methods:
-  - tag: irma
-    name: Gebruik je IRMA app
-    image_path: /static/irma.svg
-    start: http://auth-irma:8000
-  - tag: digid
-    name: Gebruik DigiD
-    image_path: /static/digid.svg
-    start: http://auth-test:8000
 
-comm_methods:
-  - tag: call
-    name: Bellen
-    image_path: /static/phone.svg
-    start: http://comm-test:8000
-  - tag: chat
-    name: Chatten
-    image_path: /static/chat.svg
-    start: http://comm-matrix-bot:3000
+[[global.auth_methods]]
+tag = "irma"
+name = "Gebruik je IRMA app"
+image_path = "/static/irma.svg"
+start = "http://auth-irma:8000"
 
-purposes:
-  - tag: report_move
-    attributes:
-      - email
-    allowed_auth:
-      - "*"
-    allowed_comm:
-      - call
-      - chat
-      - does_not_exist
-  - tag: request_permit
-    attributes:
-      - email
-    allowed_auth:
-      - irma
-      - digid
-    allowed_comm:
-      - "*"
-  - tag: request_passport
-    attributes:
-      - email
-    allowed_auth:
-      - "*"
-    allowed_comm:
-      - call
+[[global.auth_methods]]
+tag = "digid"
+name = "Gebruik DigiD"
+image_path = "/static/digid.svg"
+start = "http://auth-test:8000"
+
+
+[[global.comm_methods]]
+tag = "call"
+name = "Bellen"
+image_path = "/static/phone.svg"
+start = "http://comm-test:8000"
+
+[[global.comm_methods]]
+tag = "chat"
+name = "Chatten"
+image_path = "/static/chat.svg"
+start = "http://comm-matrix-bot:3000"
+
+
+[[global.purposes]]
+tag = "report_move"
+attributes = [ "email" ]
+allowed_auth = [ "*" ]
+allowed_comm = [ "call", "chat", "does_not_exist" ]
+
+[[global.purposes]]
+tag = "request_permit"
+attributes = [ "email" ]
+allowed_auth = [ "irma", "digid" ]
+allowed_comm = [ "*" ]
+
+[[global.purposes]]
+tag = "request_passport"
+attributes = [ "email" ]
+allowed_auth = [ "irma" ]
+allowed_comm = [ "call" ]
 
 "#;
     const TEST_CONFIG_INVALID_METHOD_AUTH: &'static str = r#"
-server_url: https://core.idcontact.test.tweede.golf
-internal_url: http://core:8000
-internal_secret: sample_secret_1234567890178901237890
+[global]
+server_url = "https://core.idcontact.test.tweede.golf"
+internal_url = "http://core:8000"
+internal_secret = "sample_secret_1234567890178901237890"
 
-auth_methods:
-  - tag: irma
-    name: Gebruik je IRMA app
-    image_path: /static/irma.svg
-    start: http://auth-irma:8000
-  - tag: digid
-    name: Gebruik DigiD
-    image_path: /static/digid.svg
-    start: http://auth-test:8000
 
-comm_methods:
-  - tag: call
-    name: Bellen
-    image_path: /static/phone.svg
-    start: http://comm-test:8000
-  - tag: chat
-    name: Chatten
-    image_path: /static/chat.svg
-    start: http://comm-matrix-bot:3000
+[[global.auth_methods]]
+tag = "irma"
+name = "Gebruik je IRMA app"
+image_path = "/static/irma.svg"
+start = "http://auth-irma:8000"
 
-purposes:
-  - tag: report_move
-    attributes:
-      - email
-    allowed_auth:
-      - "*"
-    allowed_comm:
-      - call
-      - chat
-  - tag: request_permit
-    attributes:
-      - email
-    allowed_auth:
-      - irma
-      - digid
-      - does_not_exist
-    allowed_comm:
-      - "*"
-  - tag: request_passport
-    attributes:
-      - email
-    allowed_auth:
-      - "*"
-    allowed_comm:
-      - call
+[[global.auth_methods]]
+tag = "digid"
+name = "Gebruik DigiD"
+image_path = "/static/digid.svg"
+start = "http://auth-test:8000"
+
+
+[[global.comm_methods]]
+tag = "call"
+name = "Bellen"
+image_path = "/static/phone.svg"
+start = "http://comm-test:8000"
+
+[[global.comm_methods]]
+tag = "chat"
+name = "Chatten"
+image_path = "/static/chat.svg"
+start = "http://comm-matrix-bot:3000"
+
+
+[[global.purposes]]
+tag = "report_move"
+attributes = [ "email" ]
+allowed_auth = [ "*" ]
+allowed_comm = [ "call", "chat" ]
+
+[[global.purposes]]
+tag = "request_permit"
+attributes = [ "email" ]
+allowed_auth = [ "irma", "digid", "does_not_exist" ]
+allowed_comm = [ "*" ]
+
+[[global.purposes]]
+tag = "request_passport"
+attributes = [ "email" ]
+allowed_auth = [ "irma" ]
+allowed_comm = [ "call" ]
 
 "#;
+    fn config_from_str(config: &str) -> CoreConfig {
+        let figment = Figment::from(rocket::Config::default())
+            .select(rocket::Config::DEFAULT_PROFILE)
+            .merge(Toml::string(config).nested());
+
+        figment.extract::<CoreConfig>().unwrap()
+    }
 
     #[test]
     fn test_wildcard_expansion() {
-        let config = CoreConfig::from_str(TEST_CONFIG_VALID);
+        let config = config_from_str(TEST_CONFIG_VALID);
 
         let mut test_auth = config.purposes["report_move"].allowed_auth.clone();
         test_auth.sort();
@@ -410,25 +407,20 @@ purposes:
     }
 
     #[test]
-    fn test_sample_config() {
-        let _config = CoreConfig::from_file(&format!("{}/config.yml", env!("CARGO_MANIFEST_DIR")));
-    }
-
-    #[test]
     #[should_panic]
     fn test_invalid_auth() {
-        let _config = CoreConfig::from_str(TEST_CONFIG_INVALID_METHOD_AUTH);
+        let _config = config_from_str(TEST_CONFIG_INVALID_METHOD_AUTH);
     }
 
     #[test]
     #[should_panic]
     fn test_invalid_comm() {
-        let _config = CoreConfig::from_str(TEST_CONFIG_INVALID_METHOD_COMM);
+        let _config = config_from_str(TEST_CONFIG_INVALID_METHOD_COMM);
     }
 
     #[test]
     fn test_get_purpose() {
-        let config = CoreConfig::from_str(TEST_CONFIG_VALID);
+        let config = config_from_str(TEST_CONFIG_VALID);
         assert_eq!(
             config.purpose(&"report_move".to_string()).unwrap().tag,
             "report_move"
@@ -438,7 +430,7 @@ purposes:
 
     #[test]
     fn test_get_comm_method() {
-        let config = CoreConfig::from_str(TEST_CONFIG_VALID);
+        let config = config_from_str(TEST_CONFIG_VALID);
 
         let purpose_report_move = config.purpose(&"report_move".to_string()).unwrap();
         let purpose_request_passport = config.purpose(&"request_passport".to_string()).unwrap();
@@ -475,7 +467,7 @@ purposes:
 
     #[test]
     fn test_get_auth_method() {
-        let config = CoreConfig::from_str(TEST_CONFIG_VALID);
+        let config = config_from_str(TEST_CONFIG_VALID);
 
         let purpose_report_move = config.purpose(&"report_move".to_string()).unwrap();
         let purpose_request_passport = config.purpose(&"request_passport".to_string()).unwrap();
@@ -512,7 +504,7 @@ purposes:
 
     #[test]
     fn test_urlstate() {
-        let config = CoreConfig::from_str(TEST_CONFIG_VALID);
+        let config = config_from_str(TEST_CONFIG_VALID);
 
         let mut test_map = HashMap::new();
 
