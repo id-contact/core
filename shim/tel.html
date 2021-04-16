@@ -1,20 +1,61 @@
-<html>
-    <head>
-        <title>ID-Contact Belinstructie</title>
-        <script>
-            function init() {
-                // strip ?tel: and then split on pauses to get both phone number and dtmf code.
-                telURL = decodeURIComponent(location.search).substr(5).split(/[,|;]+/);
-                document.getElementById("telnr").innerText = telURL[0];
-                document.getElementById("code").innerText = telURL[1];
-            }
-        </script>
-    </head>
-    <body onload="init()">
-        <p>U kunt nu met uw telefoon bellen naar</p>
-        <div id="telnr"></div>
+<html lang="nl">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ID-Contact Belinstructie</title>
+  <link rel="stylesheet" type="text/css" href="/static/base.css" media="all"/>
+  <script>
+    function wrapDigits(number) {
+      var html = "";
+      for (var i = 0; i < number.length; i += 1) {
+        html += "<span>" + number[i] + "</span>";
+      }
+      return html;
+    }
 
-        <p>Uw code:</p>
-        <div id="code"></div>
-    </body>
+    document.addEventListener("DOMContentLoaded", function() {
+      // strip ?tel: and then split on pauses to get both phone number and dtmf code.
+      telURL = decodeURIComponent(location.search).substr(5).split(/[,|;]+/);
+      document.getElementById("telnr").innerHTML = wrapDigits(telURL[0]);
+      document.getElementById("code").innerHTML = wrapDigits(telURL[1]);
+    });
+  </script>
+  <style>
+    body {
+      background: #7f7f7f;
+    }
+    .container {
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 30rem;
+      height: auto;
+      background: #ffffff;
+      padding: 1rem;
+    }
+    p {
+      font-size: 1.5rem;
+      color: #666;
+      margin: 1rem 0 0 0;
+    }
+    #telnr, #code {
+      font-size: 2.5rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+    }
+    #telnr span:nth-child(2n + 3), #code span:nth-child(2n + 3) {
+      display: inline-block;
+      margin-left: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <p>U kunt nu met uw telefoon bellen naar:</p>
+    <div id="telnr"></div>
+    <p>Uw code:</p>
+    <div id="code"></div>
+  </div>
+</body>
 </html>
