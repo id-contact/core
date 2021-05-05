@@ -32,30 +32,6 @@ pub struct ClientUrlResponse {
 }
 
 #[post("/start", format = "json", data = "<choices>", rank = 1)]
-pub async fn session_start_full(
-    choices: Json<StartRequestFull>,
-    config: State<'_, CoreConfig>,
-) -> Result<Json<ClientUrlResponse>, Error> {
-    // Fetch purpose and methods
-    let purpose = config.purpose(&choices.purpose)?;
-    let auth_method = config.auth_method(purpose, &choices.auth_method)?;
-    let comm_method = config.comm_method(purpose, &choices.comm_method)?;
-
-    // Setup session
-    let comm_data = comm_method.start(&purpose.tag).await?;
-    let client_url = auth_method
-        .start(
-            &purpose.attributes,
-            &comm_data.client_url,
-            &comm_data.attr_url,
-            &config,
-        )
-        .await?;
-
-    Ok(Json(ClientUrlResponse { client_url }))
-}
-
-#[post("/start", format = "json", data = "<choices>", rank = 2)]
 pub async fn session_start_auth_only(
     choices: Json<StartRequestAuthOnly>,
     config: State<'_, CoreConfig>,
@@ -77,7 +53,7 @@ pub async fn session_start_auth_only(
     Ok(Json(ClientUrlResponse { client_url }))
 }
 
-#[post("/start", format = "json", data = "<choices>", rank = 3)]
+#[post("/start", format = "json", data = "<choices>", rank = 2)]
 pub async fn start_session_comm_only(
     choices: Json<StartRequestCommOnly>,
     config: State<'_, CoreConfig>,
@@ -94,4 +70,28 @@ pub async fn start_session_comm_only(
     Ok(Json(ClientUrlResponse {
         client_url: comm_data.client_url,
     }))
+}
+
+#[post("/start", format = "json", data = "<choices>", rank = 3)]
+pub async fn session_start_full(
+    choices: Json<StartRequestFull>,
+    config: State<'_, CoreConfig>,
+) -> Result<Json<ClientUrlResponse>, Error> {
+    // Fetch purpose and methods
+    let purpose = config.purpose(&choices.purpose)?;
+    let auth_method = config.auth_method(purpose, &choices.auth_method)?;
+    let comm_method = config.comm_method(purpose, &choices.comm_method)?;
+
+    // Setup session
+    let comm_data = comm_method.start(&purpose.tag).await?;
+    let client_url = auth_method
+        .start(
+            &purpose.attributes,
+            &comm_data.client_url,
+            &comm_data.attr_url,
+            &config,
+        )
+        .await?;
+
+    Ok(Json(ClientUrlResponse { client_url }))
 }
