@@ -12,7 +12,7 @@ use config::CoreConfig;
 use methods::auth_attr_shim;
 use options::session_options;
 use rocket::fairing::AdHoc;
-use start::{session_start_auth_only, session_start_full, start_session_comm_only};
+use start::session_start;
 
 #[launch]
 fn boot() -> rocket::Rocket {
@@ -35,13 +35,7 @@ fn boot() -> rocket::Rocket {
 fn setup_routes(base: rocket::Rocket) -> rocket::Rocket {
     base.mount(
         "/",
-        routes![
-            session_options,
-            session_start_full,
-            session_start_auth_only,
-            start_session_comm_only,
-            auth_attr_shim,
-        ],
+        routes![session_options, session_start, auth_attr_shim,],
     )
     .attach(AdHoc::config::<CoreConfig>())
 }

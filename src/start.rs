@@ -31,9 +31,25 @@ pub struct ClientUrlResponse {
     client_url: String,
 }
 
-#[post("/start", format = "json", data = "<choices>", rank = 1)]
-pub async fn session_start_full(
-    choices: Json<StartRequestFull>,
+#[post("/start", format = "application/json", data = "<choices>")]
+pub async fn session_start(
+    choices: String,
+    config: State<'_, CoreConfig>,
+) -> Result<Json<ClientUrlResponse>, Error> {
+    // Workaround for issue where matching routes based on json body structure does not works as expected
+    if let Ok(start_request) = serde_json::from_str::<StartRequestFull>(&choices) {
+        session_start_full(start_request, config).await
+    } else if let Ok(start_request) = serde_json::from_str::<StartRequestAuthOnly>(&choices) {
+        session_start_auth_only(start_request, config).await
+    } else if let Ok(c) = serde_json::from_str::<StartRequestCommOnly>(&choices) {
+        start_session_comm_only(c, config).await
+    } else {
+        Err(Error::BadRequest)
+    }
+}
+
+async fn session_start_full(
+    choices: StartRequestFull,
     config: State<'_, CoreConfig>,
 ) -> Result<Json<ClientUrlResponse>, Error> {
     // Fetch purpose and methods
@@ -55,9 +71,8 @@ pub async fn session_start_full(
     Ok(Json(ClientUrlResponse { client_url }))
 }
 
-#[post("/start", format = "json", data = "<choices>", rank = 2)]
-pub async fn session_start_auth_only(
-    choices: Json<StartRequestAuthOnly>,
+async fn session_start_auth_only(
+    choices: StartRequestAuthOnly,
     config: State<'_, CoreConfig>,
 ) -> Result<Json<ClientUrlResponse>, Error> {
     // Fetch purpose and methods
@@ -77,9 +92,8 @@ pub async fn session_start_auth_only(
     Ok(Json(ClientUrlResponse { client_url }))
 }
 
-#[post("/start", format = "json", data = "<choices>", rank = 3)]
-pub async fn start_session_comm_only(
-    choices: Json<StartRequestCommOnly>,
+async fn start_session_comm_only(
+    choices: StartRequestCommOnly,
     config: State<'_, CoreConfig>,
 ) -> Result<Json<ClientUrlResponse>, Error> {
     // Fetch purpose and methods
