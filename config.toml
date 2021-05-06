@@ -22,7 +22,7 @@ start = "http://auth-test:8000"
 tag = "call"
 name = "Bellen"
 image_path = "/static/phone.svg"
-start = "http://comm-test:8000"
+start = "http://amazon-backend:8000"
 
 [[global.comm_methods]]
 tag = "chat"
@@ -30,18 +30,24 @@ name = "Chatten"
 image_path = "/static/chat.svg"
 start = "http://comm-matrix-bot:3000"
 
+[[global.comm_methods]]
+tag = "video"
+name = "Videobellen"
+image_path = "/static/video.svg"
+start = "http://comm-test:3000"
+
 
 [[global.purposes]]
 tag = "report_move"
 attributes = [ "email" ]
 allowed_auth = [ "*" ]
-allowed_comm = [ "call", "chat" ]
+allowed_comm = [ "*" ]
 
 [[global.purposes]]
 tag = "request_permit"
 attributes = [ "email" ]
 allowed_auth = [ "irma", "digid" ]
-allowed_comm = [ "*" ]
+allowed_comm = [ "call", "chat" ]
 
 [[global.purposes]]
 tag = "request_passport"
