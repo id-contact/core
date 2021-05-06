@@ -6,13 +6,13 @@ internal_secret = "sample_secret_12345678901234567890"
 
 [[global.auth_methods]]
 tag = "irma"
-name = "Gebruik je IRMA app"
+name = "IRMA"
 image_path = "/static/irma.svg"
 start = "http://auth-irma:8000"
 
 [[global.auth_methods]]
 tag = "digid"
-name = "Gebruik DigiD"
+name = "DigiD"
 image_path = "/static/digid.svg"
 shim_tel_url = true
 start = "http://auth-test:8000"
