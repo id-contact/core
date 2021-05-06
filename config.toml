@@ -22,7 +22,7 @@ start = "http://auth-test:8000"
 tag = "call"
 name = "Bellen"
 image_path = "/static/phone.svg"
-start = "http://comm-test:8000"
+start = "http://amazon-backend:8000"
 
 [[global.comm_methods]]
 tag = "chat"
