@@ -34,7 +34,7 @@ start = "http://comm-matrix-bot:3000"
 tag = "video"
 name = "Videobellen"
 image_path = "/static/video.svg"
-start = "http://comm-test:3000"
+start = "http://comm-test:8000"
 
 
 [[global.purposes]]
