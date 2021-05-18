@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 
 use crate::config::CoreConfig;
 
@@ -41,7 +41,7 @@ impl AuthenticationMethod {
             }
         }
 
-        let client = reqwest::Client::new();
+        let client = reqwest::Client::builder().timeout(Duration::from_secs(5)).build()?;
 
         Ok(client
             .post(&format!("{}/start_authentication", self.start))
@@ -73,7 +73,7 @@ impl AuthenticationMethod {
         let state = config.encode_urlstate(state)?;
 
         // Start auth session
-        let client = reqwest::Client::new();
+        let client = reqwest::Client::builder().timeout(Duration::from_secs(5)).build()?;
         Ok(client
             .post(&format!("{}/start_authentication", self.start))
             .json(&StartAuthRequest {
@@ -128,7 +128,7 @@ pub async fn auth_attr_shim(
     let continuation = state.get("continuation").ok_or(Error::BadRequest)?;
 
     // Send through results
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder().timeout(Duration::from_secs(5)).build()?;
     client
         .post(attr_url)
         .header("Content-Type", "application/jwt")
