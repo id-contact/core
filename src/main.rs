@@ -25,7 +25,10 @@ fn boot() -> rocket::Rocket {
     let config = base
         .figment()
         .extract::<CoreConfig>()
-        .expect("Could not parse configuration");
+        .unwrap_or_else(|e| {
+            log::error!("Failure to parse configuration {}", e);
+            panic!("Failure to parse configuration {}", e)
+        });
     match config.sentry_dsn() {
         Some(dsn) => base.attach(sentry::SentryFairing::new(dsn)),
         None => base,

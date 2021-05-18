@@ -17,13 +17,13 @@ impl SentryLogger {
 
 impl Log for SentryLogger {
     fn enabled(&self, metadata: &log::Metadata) -> bool {
-        metadata.level() >= log::Level::Error || self.inner.enabled(metadata)
+        metadata.level() >= log::Level::Warn || self.inner.enabled(metadata)
     }
 
     fn log(&self, record: &log::Record) {
         self.inner.log(record);
 
-        if record.level() >= log::Level::Error {
+        if record.level() >= log::Level::Warn {
             // Choices here might need review in future.
             // The current mapping puts the location of the log function
             // as culprit, but sentry's documentation is extremely cagey

@@ -81,11 +81,13 @@ impl From<RawCoreConfig> for CoreConfig {
             internal_signer: Hs256
                 .signer_from_bytes(config.internal_secret.as_bytes())
                 .unwrap_or_else(|e| {
+                    log::error!("Could not generate signer from internal secret: {}", e);
                     panic!("Could not generate signer from internal secret: {}", e)
                 }),
             internal_verifier: Hs256
                 .verifier_from_bytes(config.internal_secret.as_bytes())
                 .unwrap_or_else(|e| {
+                    log::error!("Could not generate verifier from internal secret: {}", e);
                     panic!("Could not generate verifier from internal secret: {}", e)
                 }),
             internal_url: config.internal_url,
@@ -106,9 +108,11 @@ impl From<RawCoreConfig> for CoreConfig {
         // check all mentioned auth and comm methods exist
         for purpose in config.purposes.values() {
             if !validate_methods(&purpose.allowed_auth, &config.auth_methods) {
+                log::error!("Invalid auth method in purpose {}", purpose.tag);
                 panic!("Invalid auth method in purpose {}", purpose.tag);
             }
             if !validate_methods(&purpose.allowed_comm, &config.comm_methods) {
+                log::error!("Invalid comm method in purpose {}", purpose.tag);
                 panic!("Invalid comm method in purpose {}", purpose.tag);
             }
         }
