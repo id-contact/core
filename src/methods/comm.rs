@@ -116,3 +116,152 @@ impl CommunicationMethod {
             .await?)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use httpmock::MockServer;
+    use serde_json::json;
+
+    #[test]
+    fn test_start_without_attributes_no_attrurl() {
+        let server = MockServer::start();
+        let start_mock = server.mock(|when, then | {
+            when.path("/start_communication")
+                .method(httpmock::Method::POST)
+                .json_body(json!({
+                    "purpose": "something"
+                }));
+            then.status(200)
+                .header("Content-Type", "application/json")
+                .json_body(json!({
+                    "client_url": "https://example.com/client_url",
+                }));
+        });
+
+        let method = super::CommunicationMethod{
+            tag: "test".into(),
+            name: "test".into(),
+            image_path: "none".into(),
+            start: server.base_url(),
+            disable_attributes_at_start: false,
+        };
+
+        let result = tokio_test::block_on(
+            method.start(&"something".into()));
+        
+        start_mock.assert();
+        let result = result.unwrap();
+        assert_eq!(result.client_url, "https://example.com/client_url");
+        assert_eq!(result.attr_url, None);
+    }
+
+    #[test]
+    fn test_start_without_attributes_attrurl() {
+        let server = MockServer::start();
+        let start_mock = server.mock(|when, then | {
+            when.path("/start_communication")
+                .method(httpmock::Method::POST)
+                .json_body(json!({
+                    "purpose": "something"
+                }));
+            then.status(200)
+                .header("Content-Type", "application/json")
+                .json_body(json!({
+                    "client_url": "https://example.com/client_url",
+                    "attr_url": "https://example.com/attr_url",
+                }));
+        });
+
+        let method = super::CommunicationMethod{
+            tag: "test".into(),
+            name: "test".into(),
+            image_path: "none".into(),
+            start: server.base_url(),
+            disable_attributes_at_start: false,
+        };
+
+        let result = tokio_test::block_on(
+            method.start(&"something".into()));
+        
+        start_mock.assert();
+        let result = result.unwrap();
+        assert_eq!(result.client_url, "https://example.com/client_url");
+        assert_eq!(result.attr_url, Some("https://example.com/attr_url".into()));
+    }
+
+    #[test]
+    fn test_start_with_attributes() {
+        let server = MockServer::start();
+        let start_mock = server.mock(|when, then | {
+            when.path("/start_communication")
+                .method(httpmock::Method::POST)
+                .json_body(json!({
+                    "purpose": "something",
+                    "auth_result": "test",
+                }));
+            then.status(200)
+                .header("Content-Type", "application/json")
+                .json_body(json!({
+                    "client_url": "https://example.com/client_url",
+                }));
+        });
+
+        let method = super::CommunicationMethod{
+            tag: "test".into(),
+            name: "test".into(),
+            image_path: "none".into(),
+            start: server.base_url(),
+            disable_attributes_at_start: false,
+        };
+
+        let result = tokio_test::block_on(
+            method.start_with_auth_result(&"something".into(), "test"));
+        
+        start_mock.assert();
+        let result = result.unwrap();
+        assert_eq!(result.client_url, "https://example.com/client_url");
+        assert_eq!(result.attr_url, None);
+    }
+
+    #[test]
+    fn test_auth_result_fallback() {
+        let server = MockServer::start();
+        let start_mock = server.mock(|when, then | {
+            when.path("/start_communication")
+                .method(httpmock::Method::POST)
+                .json_body(json!({
+                    "purpose": "something",
+                }));
+            then.status(200)
+                .header("Content-Type", "application/json")
+                .json_body(json!({
+                    "client_url": "https://example.com/client_url",
+                    "attr_url": format!("{}/attr_url", server.base_url()),
+                }));
+        });
+        let auth_mock = server.mock(|when, then| {
+            when.path("/attr_url")
+                .method(httpmock::Method::POST)
+                .header("Content-Type", "application/jwt")
+                .body("test");
+            then.status(200);
+        });
+
+        let method = super::CommunicationMethod{
+            tag: "test".into(),
+            name: "test".into(),
+            image_path: "none".into(),
+            start: server.base_url(),
+            disable_attributes_at_start: true,
+        };
+
+        let result = tokio_test::block_on(
+            method.start_with_auth_result(&"something".into(), "test"));
+        
+        start_mock.assert();
+        auth_mock.assert();
+        let result = result.unwrap();
+        assert_eq!(result.client_url, "https://example.com/client_url");
+        assert_eq!(result.attr_url, None);
+    }
+}

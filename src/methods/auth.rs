@@ -146,9 +146,9 @@ mod tests {
     use httpmock::MockServer;
     use id_contact_proto::StartAuthRequest;
     use serde_json::json;
-    use rocket::figment::Figment;
+    use rocket::{figment::Figment, local::blocking::Client};
 
-    use crate::config::CoreConfig;
+    use crate::{config::CoreConfig, setup_routes};
 
     const TEST_CONFIG_VALID: &'static str = r#"
 [global]
@@ -243,10 +243,10 @@ allowed_comm = [ "call" ]
                 &vec!["email".into()], 
                 "https://example.com/continuation", 
                 &Some("https://example.com/attr_url".into()), 
-                &config)).unwrap();
+                &config));
         
-        assert_eq!(result, "https://example.com/client_url");
         start_mock.assert();
+        assert_eq!(result.unwrap(), "https://example.com/client_url");
     }
 
     #[test]
@@ -288,10 +288,10 @@ allowed_comm = [ "call" ]
                 &vec!["email".into()], 
                 "https://example.com/continuation", 
                 &None, 
-                &config)).unwrap();
-        
-        assert_eq!(result, "https://example.com/client_url");
+                &config));
+
         start_mock.assert();
+        assert_eq!(result.unwrap(), "https://example.com/client_url");
     }
 
     #[test]
@@ -440,9 +440,98 @@ allowed_comm = [ "call" ]
                 &vec!["email".into()], 
                 "https://example.com/continuation", 
                 &Some("https://example.com/attr_url".into()), 
-                &config)).unwrap();
+                &config));
         
-        assert_eq!(result, "https://example.com/client_url");
         start_mock.assert();
+        assert_eq!(result.unwrap(), "https://example.com/client_url");
+    }
+
+    #[test]
+    fn test_attr_url_shim_end_to_end() {
+        let server = httpmock::MockServer::start();
+
+        let figment = Figment::from(rocket::Config::default())
+            .select(rocket::Config::DEFAULT_PROFILE)
+            .merge(Toml::string(&format!(r#"
+[global]
+server_url = ""
+internal_url = ""
+internal_secret = "sample_secret_1234567890178901237890"
+
+[[global.auth_methods]]
+tag = "test"
+name = "test"
+image_path = "none"
+disable_attr_url = true
+start = "{}"
+
+[[global.comm_methods]]
+tag = "test"
+name = "test"
+image_path = "none"
+start = "{}"
+
+[[global.purposes]]
+tag = "test"
+attributes = [ "email" ]
+allowed_auth = [ "test" ]
+allowed_comm = [ "test" ]
+"#, server.base_url(), server.base_url())).nested());
+
+        let config = figment.extract::<CoreConfig>().unwrap();
+        let client = Client::tracked(setup_routes(rocket::custom(figment))).unwrap();
+
+        static mut ESCAPE_HATCH: Option<String> = None;
+        let start_mock = server.mock(|when, then| {
+            when.path("/start_authentication")
+                .method(httpmock::Method::POST)
+                .matches(|req| {
+                    if let Some(body) = &req.body {
+                        let body = serde_json::from_slice::<StartAuthRequest>(body);
+                        if let Ok(body) = body {
+                            unsafe {
+                                ESCAPE_HATCH = Some(body.continuation.clone());
+                            }
+                            body.attr_url == None &&
+                            body.continuation != "https://example.com/continuation" &&
+                            body.attributes == vec!["email"]
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    }
+                });
+            then.status(200)
+                .header("Content-Type", "application/json")
+                .json_body(json!({
+                    "client_url": "https://example.com/client_url",
+                }));
+        });
+        let attr_mock = server.mock(|when, then| {
+            when.path("/attr_url")
+                .method(httpmock::Method::POST)
+                .header("Content-Type", "application/jwt")
+                .body("test");
+            then.status(200);
+        });
+
+        // Do start request
+        let result = tokio_test::block_on(config.auth_methods["test"].start(
+            &vec!["email".into()],
+            "https://example.com/continuation",
+            &Some(format!("{}/attr_url", server.base_url())),
+            &config));
+
+        start_mock.assert();
+        let result = result.unwrap();
+        assert_eq!(result, "https://example.com/client_url");
+
+        // Test authentication finish path
+        let auth_finish = unsafe {ESCAPE_HATCH.clone().unwrap()};
+        let response = client.get(format!("{}?result=test", auth_finish)).dispatch();
+        attr_mock.assert();
+        assert_eq!(response.status(), rocket::http::Status::SeeOther);
+        assert_eq!(response.headers().get_one("Location"), Some("https://example.com/continuation".into()));
     }
 }
