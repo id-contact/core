@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use super::{Method, Tag};
 use id_contact_proto::{StartCommRequest, StartCommResponse};
 use serde::Deserialize;
@@ -33,7 +35,7 @@ impl Method for CommunicationMethod {
 impl CommunicationMethod {
     // Start a communication session to be composed with an authentication session
     pub async fn start(&self, purpose: &Tag) -> Result<StartCommResponse, reqwest::Error> {
-        let client = reqwest::Client::new();
+        let client = reqwest::Client::builder().timeout(Duration::from_secs(5)).build()?;
 
         Ok(client
             .post(&format!("{}/start_communication", &self.start))
@@ -56,7 +58,7 @@ impl CommunicationMethod {
         let comm_data = self.start(purpose).await?;
 
         if let Some(attr_url) = comm_data.attr_url {
-            let client = reqwest::Client::new();
+            let client = reqwest::Client::builder().timeout(Duration::from_secs(5)).build()?;
 
             client
                 .post(&attr_url)
@@ -99,7 +101,7 @@ impl CommunicationMethod {
                 .await;
         }
 
-        let client = reqwest::Client::new();
+        let client = reqwest::Client::builder().timeout(Duration::from_secs(5)).build()?;
 
         Ok(client
             .post(&format!("{}/start_communication", &self.start))
