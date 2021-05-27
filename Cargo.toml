@@ -20,3 +20,5 @@ urlencoding = "1.1.1"
 
 [dev-dependencies]
 figment = { version = "0.10.5", features = ["env", "toml", "json"] }
+httpmock = "0.5.8"
+tokio-test = "0.4.1"
