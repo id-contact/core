@@ -78,7 +78,7 @@ impl AuthenticationMethod {
             .post(&format!("{}/start_authentication", self.start))
             .json(&StartAuthRequest {
                 attributes: attributes.clone(),
-                continuation: format!("{}/auth_attr_shim/{}", config.internal_url(), state),
+                continuation: format!("{}/auth_attr_shim/{}", config.server_url(), state),
                 attr_url: None,
             })
             .send()
@@ -455,7 +455,7 @@ allowed_comm = [ "call" ]
             .merge(Toml::string(&format!(r#"
 [global]
 server_url = ""
-internal_url = ""
+internal_url = "https://example.com/should_not_be_used"
 internal_secret = "sample_secret_1234567890178901237890"
 
 [[global.auth_methods]]
