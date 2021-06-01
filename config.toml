@@ -31,11 +31,10 @@ image_path = "/static/chat.svg"
 start = "http://comm-matrix-bot:3000"
 
 [[global.comm_methods]]
-tag = "video"
-name = "Videobellen"
+tag = "test"
+name = "Test"
 image_path = "/static/video.svg"
 start = "http://comm-test:8000"
-
 
 [[global.purposes]]
 tag = "report_move"
@@ -54,3 +53,9 @@ tag = "request_passport"
 attributes = [ "email" ]
 allowed_auth = [ "*" ]
 allowed_comm = [ "call" ]
+
+[[global.purposes]]
+tag = "notice_of_marriage"
+attributes = [ "email" ]
+allowed_auth = [ "*" ]
+allowed_comm = [ ]
