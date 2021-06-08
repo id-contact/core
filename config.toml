@@ -59,3 +59,9 @@ tag = "notice_of_marriage"
 attributes = [ "email" ]
 allowed_auth = [ "*" ]
 allowed_comm = [ ]
+
+[[global.purposes]]
+tag = "personal_question"
+attributes = [ "fullname", "city"]
+allowed_auth = [ "*" ]
+allowed_comm = ["call", "chat" ]
