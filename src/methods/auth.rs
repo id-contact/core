@@ -1,6 +1,10 @@
 use std::{collections::HashMap, time::Duration};
 
 use crate::config::CoreConfig;
+use josekit::{
+    jws::JwsHeader,
+    jwt::{self, JwtPayload},
+};
 
 use super::{Method, Tag};
 use crate::error::Error;
@@ -8,19 +12,15 @@ use id_contact_proto::{StartAuthRequest, StartAuthResponse};
 use rocket::{response::Redirect, State};
 use serde::Deserialize;
 
-fn default_as_false() -> bool {
-    false
-}
-
 #[derive(Debug, Deserialize, Clone)]
 pub struct AuthenticationMethod {
     tag: Tag,
     name: String,
     image_path: String,
     start: String,
-    #[serde(default = "default_as_false")]
+    #[serde(default = "bool::default")]
     disable_attr_url: bool,
-    #[serde(default = "default_as_false")]
+    #[serde(default = "bool::default")]
     shim_tel_url: bool,
 }
 
@@ -91,15 +91,32 @@ impl AuthenticationMethod {
 
     fn parse_continuation(&self, continuation: &str, config: &CoreConfig) -> String {
         if continuation.starts_with("tel:") && self.shim_tel_url {
+            let token = sign_continuation(continuation, config);
             format!(
-                "{}/shim/tel.html?{}",
-                config.server_url(),
-                urlencoding::encode(continuation)
+                "{}{}",
+                config.ui_tel_url(),
+                urlencoding::encode(&token)
             )
         } else {
             continuation.to_string()
         }
     }
+}
+
+fn sign_continuation(continuation: &str, config: &CoreConfig) -> String {
+    let mut payload = JwtPayload::new();
+    payload.set_issued_at(&std::time::SystemTime::now());
+
+    // expires_at is set to the expiry time of a DTMF code
+    payload.set_expires_at(
+        &(std::time::SystemTime::now() + std::time::Duration::from_secs(60 * 60)),
+    );
+    payload.set_claim("continuation", Some(serde_json::to_value(continuation).unwrap())).unwrap();
+    jwt::encode_with_signer(
+        &payload,
+        &JwsHeader::new(),
+        config.ui_signer(),
+    ).unwrap()
 }
 
 impl Method for AuthenticationMethod {
@@ -155,7 +172,40 @@ mod tests {
 server_url = "https://core.idcontact.test.tweede.golf"
 internal_url = "http://core:8000"
 internal_secret = "sample_secret_1234567890178901237890"
+ui_tel_url = "https://poc.idcontact.test.tweede.golf/tel/"
 
+[global.ui_signing_privkey]
+type = "RSA"
+key = """
+-----BEGIN PRIVATE KEY-----
+MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQDn/BGtPZPgYa+5
+BhxaMuv+UV7nWxNXYUt3cYBoyIc3xD9VP9cSE/+RnrTjaXUGPZWlnbIzG/b3gkrA
+EIg1zfjxUth34N+QycnjJf0tkcrZaR7q0JYEH2ZiAaMzAI11dzNuX3rHX8d69pOi
+u+T3WvMK/PDq9XTyO2msDI3lpgxTgjT9xUnCLTduH+yStoAHXXSZBKqLVBT/bPoe
+S5/v7/H9sALG+JYLI8J3/CRc2kWFNxGV8V7IpzLSnAXHU4sIMnWpjuhT7PXBzKl4
+4d6JRLGuJIeVZpPbiR74nvwYZWacJl278xG66fmG+BqJbGeEgGYTEljq9G4yXCRt
+Go5+3lBNAgMBAAECggEARY9EsaCMLbS83wrhB37LWneFsHOTqhjHaypCaajvOp6C
+qwo4b/hFIqHm9WWSrGtc6ssNOtwAwphz14Fdhlybb6j6tX9dKeoHui+S6c4Ud/pY
+ReqDgPr1VR/OkqVwxS8X4dmJVCz5AHrdK+eRMUY5KCtOBfXRuixsdCVTiu+uNH99
+QC3kID1mmOF3B0chOK4WPN4cCsQpfOvoJfPBcJOtyxUSLlQdJH+04s3gVA24nCJj
+66+AnVkjgkyQ3q0Jugh1vo0ikrUW8uSLmg40sT5eYDN9jP6r5Gc8yDqsmYNVbLhU
+pY8XR4gtzbtAXK8R2ISKNhOSuTv4SWFXVZiDIBkuIQKBgQD3qnZYyhGzAiSM7T/R
+WS9KrQlzpRV5qSnEp2sPG/YF+SGAdgOaWOEUa3vbkCuLCTkoJhdTp67BZvv/657Q
+2eK2khsYRs02Oq+4rYvdcAv/wS2vkMbg6CUp1w2/pwBvwFTXegr00k6IabXNcXBy
+kAjMsZqVDSdQByrf80AlFyEsOQKBgQDvyoUDhLReeDNkbkPHL/EHD69Hgsc77Hm6
+MEiLdNljTJLRUl+DuD3yKX1xVBaCLp9fMJ/mCrxtkldhW+i6JBHRQ7vdf11zNsRf
+2Cud3Q97RMHTacCHhEQDGnYkOQNTRhk8L31N0XBKfUu0phSmVyTnu2lLWmYJ8hyO
+yOEB19JstQKBgQC3oVw+WRTmdSBEnWREBKxb4hCv/ib+Hb8qYDew7DpuE1oTtWzW
+dC/uxAMBuNOQMzZ93kBNdnbMT19pUXpfwC2o0IvmZBijrL+9Xm/lr7410zXchqvu
+9jEX5Kv8/gYE1cYSPhsBiy1PV5HE0edeCg18N/M1sJsFa0sO4X0eAxhFgQKBgQC7
+iQDkUooaBBn1ZsM9agIwSpUD8YTOGdDNy+tAnf9SSNXePXUT+CkCVm6UDnaYE8xy
+zv2PFUBu1W/fZdkqkwEYT8gCoBS/AcstRkw+Z2AvQQPxyxhXJBto7e4NwEUYgI9F
+4cI29SDEMR/fRbCKs0basVjVJPr+tkqdZP+MyHT6rQKBgQCT1YjY4F45Qn0Vl+sZ
+HqwVHvPMwVsexcRTdC0evaX/09s0xscSACvFJh5Dm9gnuMHElBcpZFATIvFcbV5Y
+MbJ/NNQiD63NEcL9VXwT96sMx2tnduOq4sYzu84kwPQ4ohxmPt/7xHU3L8SGqoec
+Bs6neR/sZuHzNm8y/xtxj2ZAEw==
+-----END PRIVATE KEY-----
+"""
 
 [[global.auth_methods]]
 tag = "irma"
@@ -457,6 +507,40 @@ allowed_comm = [ "call" ]
 server_url = ""
 internal_url = "https://example.com/should_not_be_used"
 internal_secret = "sample_secret_1234567890178901237890"
+ui_tel_url = "https://poc.idcontact.test.tweede.golf/tel/"
+
+[global.ui_signing_privkey]
+type = "RSA"
+key = """
+-----BEGIN PRIVATE KEY-----
+MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQDn/BGtPZPgYa+5
+BhxaMuv+UV7nWxNXYUt3cYBoyIc3xD9VP9cSE/+RnrTjaXUGPZWlnbIzG/b3gkrA
+EIg1zfjxUth34N+QycnjJf0tkcrZaR7q0JYEH2ZiAaMzAI11dzNuX3rHX8d69pOi
+u+T3WvMK/PDq9XTyO2msDI3lpgxTgjT9xUnCLTduH+yStoAHXXSZBKqLVBT/bPoe
+S5/v7/H9sALG+JYLI8J3/CRc2kWFNxGV8V7IpzLSnAXHU4sIMnWpjuhT7PXBzKl4
+4d6JRLGuJIeVZpPbiR74nvwYZWacJl278xG66fmG+BqJbGeEgGYTEljq9G4yXCRt
+Go5+3lBNAgMBAAECggEARY9EsaCMLbS83wrhB37LWneFsHOTqhjHaypCaajvOp6C
+qwo4b/hFIqHm9WWSrGtc6ssNOtwAwphz14Fdhlybb6j6tX9dKeoHui+S6c4Ud/pY
+ReqDgPr1VR/OkqVwxS8X4dmJVCz5AHrdK+eRMUY5KCtOBfXRuixsdCVTiu+uNH99
+QC3kID1mmOF3B0chOK4WPN4cCsQpfOvoJfPBcJOtyxUSLlQdJH+04s3gVA24nCJj
+66+AnVkjgkyQ3q0Jugh1vo0ikrUW8uSLmg40sT5eYDN9jP6r5Gc8yDqsmYNVbLhU
+pY8XR4gtzbtAXK8R2ISKNhOSuTv4SWFXVZiDIBkuIQKBgQD3qnZYyhGzAiSM7T/R
+WS9KrQlzpRV5qSnEp2sPG/YF+SGAdgOaWOEUa3vbkCuLCTkoJhdTp67BZvv/657Q
+2eK2khsYRs02Oq+4rYvdcAv/wS2vkMbg6CUp1w2/pwBvwFTXegr00k6IabXNcXBy
+kAjMsZqVDSdQByrf80AlFyEsOQKBgQDvyoUDhLReeDNkbkPHL/EHD69Hgsc77Hm6
+MEiLdNljTJLRUl+DuD3yKX1xVBaCLp9fMJ/mCrxtkldhW+i6JBHRQ7vdf11zNsRf
+2Cud3Q97RMHTacCHhEQDGnYkOQNTRhk8L31N0XBKfUu0phSmVyTnu2lLWmYJ8hyO
+yOEB19JstQKBgQC3oVw+WRTmdSBEnWREBKxb4hCv/ib+Hb8qYDew7DpuE1oTtWzW
+dC/uxAMBuNOQMzZ93kBNdnbMT19pUXpfwC2o0IvmZBijrL+9Xm/lr7410zXchqvu
+9jEX5Kv8/gYE1cYSPhsBiy1PV5HE0edeCg18N/M1sJsFa0sO4X0eAxhFgQKBgQC7
+iQDkUooaBBn1ZsM9agIwSpUD8YTOGdDNy+tAnf9SSNXePXUT+CkCVm6UDnaYE8xy
+zv2PFUBu1W/fZdkqkwEYT8gCoBS/AcstRkw+Z2AvQQPxyxhXJBto7e4NwEUYgI9F
+4cI29SDEMR/fRbCKs0basVjVJPr+tkqdZP+MyHT6rQKBgQCT1YjY4F45Qn0Vl+sZ
+HqwVHvPMwVsexcRTdC0evaX/09s0xscSACvFJh5Dm9gnuMHElBcpZFATIvFcbV5Y
+MbJ/NNQiD63NEcL9VXwT96sMx2tnduOq4sYzu84kwPQ4ohxmPt/7xHU3L8SGqoec
+Bs6neR/sZuHzNm8y/xtxj2ZAEw==
+-----END PRIVATE KEY-----
+"""
 
 [[global.auth_methods]]
 tag = "test"
