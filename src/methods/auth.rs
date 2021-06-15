@@ -95,7 +95,7 @@ impl AuthenticationMethod {
             format!(
                 "{}{}",
                 config.ui_tel_url(),
-                urlencoding::encode(&token)
+                &token
             )
         } else {
             continuation.to_string()
