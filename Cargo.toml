@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 env_logger = "0.8.3"
+id-contact-jwt = { git = "https://github.com/id-contact/id-contact-jwt.git" }
 id-contact-proto = { git = "https://github.com/id-contact/id-contact-proto.git" }
 josekit = "0.7.1"
 log = "0.4.14"

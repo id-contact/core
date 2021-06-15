@@ -1133,6 +1133,7 @@ dependencies = [
  "env_logger",
  "figment",
  "httpmock",
+ "id-contact-jwt",
  "id-contact-proto",
  "josekit",
  "log",
@@ -1145,6 +1146,17 @@ dependencies = [
  "serde_yaml",
  "tokio-test",
  "urlencoding",
+]
+
+[[package]]
+name = "id-contact-jwt"
+version = "0.1.0"
+source = "git+https://github.com/id-contact/id-contact-jwt.git#0bd6f5c01a3076c9557ecb9268a7c36b8693d44d"
+dependencies = [
+ "id-contact-proto",
+ "josekit",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
