@@ -4,14 +4,13 @@ use id_contact_jwt::SignKeyConfig;
 use josekit::{
     jws::{
         alg::hmac::{HmacJwsAlgorithm::Hs256, HmacJwsSigner, HmacJwsVerifier},
-        JwsHeader,
-        JwsSigner,
+        JwsHeader, JwsSigner,
     },
     jwt::{self, JwtPayload, JwtPayloadValidator},
 };
-use std::convert::TryFrom;
 use serde::Deserialize;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Purpose {
@@ -97,11 +96,12 @@ impl From<RawCoreConfig> for CoreConfig {
                     log::error!("Could not generate verifier from internal secret: {}", e);
                     panic!("Could not generate verifier from internal secret: {}", e)
                 }),
-            ui_signer: Box::<dyn JwsSigner>::try_from(config.ui_signing_privkey)
-                .unwrap_or_else(|e| {
+            ui_signer: Box::<dyn JwsSigner>::try_from(config.ui_signing_privkey).unwrap_or_else(
+                |e| {
                     log::error!("Could not generate signer from core private key: {}", e);
                     panic!("Could not generate signer from core private key: {}", e)
-                }),
+                },
+            ),
             internal_url: config.internal_url,
             server_url: config.server_url,
             ui_tel_url: config.ui_tel_url,

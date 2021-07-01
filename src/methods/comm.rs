@@ -35,7 +35,9 @@ impl Method for CommunicationMethod {
 impl CommunicationMethod {
     // Start a communication session to be composed with an authentication session
     pub async fn start(&self, purpose: &Tag) -> Result<StartCommResponse, reqwest::Error> {
-        let client = reqwest::Client::builder().timeout(Duration::from_secs(5)).build()?;
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(5))
+            .build()?;
 
         Ok(client
             .post(&format!("{}/start_communication", &self.start))
@@ -58,7 +60,9 @@ impl CommunicationMethod {
         let comm_data = self.start(purpose).await?;
 
         if let Some(attr_url) = comm_data.attr_url {
-            let client = reqwest::Client::builder().timeout(Duration::from_secs(5)).build()?;
+            let client = reqwest::Client::builder()
+                .timeout(Duration::from_secs(5))
+                .build()?;
 
             client
                 .post(&attr_url)
@@ -101,7 +105,9 @@ impl CommunicationMethod {
                 .await;
         }
 
-        let client = reqwest::Client::builder().timeout(Duration::from_secs(5)).build()?;
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(5))
+            .build()?;
 
         Ok(client
             .post(&format!("{}/start_communication", &self.start))
@@ -125,7 +131,7 @@ mod tests {
     #[test]
     fn test_start_without_attributes_no_attrurl() {
         let server = MockServer::start();
-        let start_mock = server.mock(|when, then | {
+        let start_mock = server.mock(|when, then| {
             when.path("/start_communication")
                 .method(httpmock::Method::POST)
                 .json_body(json!({
@@ -138,7 +144,7 @@ mod tests {
                 }));
         });
 
-        let method = super::CommunicationMethod{
+        let method = super::CommunicationMethod {
             tag: "test".into(),
             name: "test".into(),
             image_path: "none".into(),
@@ -146,9 +152,8 @@ mod tests {
             disable_attributes_at_start: false,
         };
 
-        let result = tokio_test::block_on(
-            method.start(&"something".into()));
-        
+        let result = tokio_test::block_on(method.start(&"something".into()));
+
         start_mock.assert();
         let result = result.unwrap();
         assert_eq!(result.client_url, "https://example.com/client_url");
@@ -158,7 +163,7 @@ mod tests {
     #[test]
     fn test_start_without_attributes_attrurl() {
         let server = MockServer::start();
-        let start_mock = server.mock(|when, then | {
+        let start_mock = server.mock(|when, then| {
             when.path("/start_communication")
                 .method(httpmock::Method::POST)
                 .json_body(json!({
@@ -172,7 +177,7 @@ mod tests {
                 }));
         });
 
-        let method = super::CommunicationMethod{
+        let method = super::CommunicationMethod {
             tag: "test".into(),
             name: "test".into(),
             image_path: "none".into(),
@@ -180,9 +185,8 @@ mod tests {
             disable_attributes_at_start: false,
         };
 
-        let result = tokio_test::block_on(
-            method.start(&"something".into()));
-        
+        let result = tokio_test::block_on(method.start(&"something".into()));
+
         start_mock.assert();
         let result = result.unwrap();
         assert_eq!(result.client_url, "https://example.com/client_url");
@@ -192,7 +196,7 @@ mod tests {
     #[test]
     fn test_start_with_attributes() {
         let server = MockServer::start();
-        let start_mock = server.mock(|when, then | {
+        let start_mock = server.mock(|when, then| {
             when.path("/start_communication")
                 .method(httpmock::Method::POST)
                 .json_body(json!({
@@ -206,7 +210,7 @@ mod tests {
                 }));
         });
 
-        let method = super::CommunicationMethod{
+        let method = super::CommunicationMethod {
             tag: "test".into(),
             name: "test".into(),
             image_path: "none".into(),
@@ -214,9 +218,9 @@ mod tests {
             disable_attributes_at_start: false,
         };
 
-        let result = tokio_test::block_on(
-            method.start_with_auth_result(&"something".into(), "test"));
-        
+        let result =
+            tokio_test::block_on(method.start_with_auth_result(&"something".into(), "test"));
+
         start_mock.assert();
         let result = result.unwrap();
         assert_eq!(result.client_url, "https://example.com/client_url");
@@ -226,7 +230,7 @@ mod tests {
     #[test]
     fn test_auth_result_fallback() {
         let server = MockServer::start();
-        let start_mock = server.mock(|when, then | {
+        let start_mock = server.mock(|when, then| {
             when.path("/start_communication")
                 .method(httpmock::Method::POST)
                 .json_body(json!({
@@ -247,7 +251,7 @@ mod tests {
             then.status(200);
         });
 
-        let method = super::CommunicationMethod{
+        let method = super::CommunicationMethod {
             tag: "test".into(),
             name: "test".into(),
             image_path: "none".into(),
@@ -255,9 +259,9 @@ mod tests {
             disable_attributes_at_start: true,
         };
 
-        let result = tokio_test::block_on(
-            method.start_with_auth_result(&"something".into(), "test"));
-        
+        let result =
+            tokio_test::block_on(method.start_with_auth_result(&"something".into(), "test"));
+
         start_mock.assert();
         auth_mock.assert();
         let result = result.unwrap();

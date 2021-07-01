@@ -38,6 +38,34 @@ pub struct SessionOptions {
     comm_methods: Vec<MethodProperties>,
 }
 
+type AllSessionOptions = HashMap<String, SessionOptions>;
+
+#[get("/session_options")]
+pub fn all_session_options(config: State<CoreConfig>) -> Result<Json<AllSessionOptions>, Error> {
+    let mut all_options: AllSessionOptions = HashMap::new();
+
+    for (name, purpose) in &config.purposes {
+        let auth_methods = MethodProperties::filter_methods_by_tags(
+            purpose.allowed_auth.iter(),
+            &config.auth_methods,
+        )?;
+        let comm_methods = MethodProperties::filter_methods_by_tags(
+            purpose.allowed_comm.iter(),
+            &config.comm_methods,
+        )?;
+
+        all_options.insert(
+            name.to_string(),
+            SessionOptions {
+                auth_methods,
+                comm_methods,
+            },
+        );
+    }
+
+    Ok(Json(all_options))
+}
+
 #[get("/session_options/<purpose>")]
 pub fn session_options(
     purpose: String,
