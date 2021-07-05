@@ -41,7 +41,9 @@ impl AuthenticationMethod {
             }
         }
 
-        let client = reqwest::Client::builder().timeout(Duration::from_secs(5)).build()?;
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(5))
+            .build()?;
 
         Ok(client
             .post(&format!("{}/start_authentication", self.start))
@@ -73,7 +75,9 @@ impl AuthenticationMethod {
         let state = config.encode_urlstate(state)?;
 
         // Start auth session
-        let client = reqwest::Client::builder().timeout(Duration::from_secs(5)).build()?;
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(5))
+            .build()?;
         Ok(client
             .post(&format!("{}/start_authentication", self.start))
             .json(&StartAuthRequest {
@@ -92,11 +96,7 @@ impl AuthenticationMethod {
     fn parse_continuation(&self, continuation: &str, config: &CoreConfig) -> String {
         if continuation.starts_with("tel:") && self.shim_tel_url {
             let token = sign_continuation(continuation, config);
-            format!(
-                "{}{}",
-                config.ui_tel_url(),
-                &token
-            )
+            format!("{}{}", config.ui_tel_url(), &token)
         } else {
             continuation.to_string()
         }
@@ -108,15 +108,15 @@ fn sign_continuation(continuation: &str, config: &CoreConfig) -> String {
     payload.set_issued_at(&std::time::SystemTime::now());
 
     // expires_at is set to the expiry time of a DTMF code
-    payload.set_expires_at(
-        &(std::time::SystemTime::now() + std::time::Duration::from_secs(60 * 60)),
-    );
-    payload.set_claim("continuation", Some(serde_json::to_value(continuation).unwrap())).unwrap();
-    jwt::encode_with_signer(
-        &payload,
-        &JwsHeader::new(),
-        config.ui_signer(),
-    ).unwrap()
+    payload
+        .set_expires_at(&(std::time::SystemTime::now() + std::time::Duration::from_secs(60 * 60)));
+    payload
+        .set_claim(
+            "continuation",
+            Some(serde_json::to_value(continuation).unwrap()),
+        )
+        .unwrap();
+    jwt::encode_with_signer(&payload, &JwsHeader::new(), config.ui_signer()).unwrap()
 }
 
 impl Method for AuthenticationMethod {
@@ -145,7 +145,9 @@ pub async fn auth_attr_shim(
     let continuation = state.get("continuation").ok_or(Error::BadRequest)?;
 
     // Send through results
-    let client = reqwest::Client::builder().timeout(Duration::from_secs(5)).build()?;
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(5))
+        .build()?;
     client
         .post(attr_url)
         .header("Content-Type", "application/jwt")
@@ -162,8 +164,8 @@ mod tests {
     use figment::providers::{Format, Toml};
     use httpmock::MockServer;
     use id_contact_proto::StartAuthRequest;
-    use serde_json::json;
     use rocket::{figment::Figment, local::blocking::Client};
+    use serde_json::json;
 
     use crate::{config::CoreConfig, setup_routes};
 
@@ -258,11 +260,11 @@ allowed_comm = [ "call" ]
         let figment = Figment::from(rocket::Config::default())
             .select(rocket::Config::DEFAULT_PROFILE)
             .merge(Toml::string(TEST_CONFIG_VALID).nested());
-        
+
         let config = figment.extract::<CoreConfig>().unwrap();
 
         let server = MockServer::start();
-        let start_mock = server.mock(|when, then | {
+        let start_mock = server.mock(|when, then| {
             when.path("/start_authentication")
                 .method(httpmock::Method::POST)
                 .json_body(json!({
@@ -279,7 +281,7 @@ allowed_comm = [ "call" ]
                 }));
         });
 
-        let method = super::AuthenticationMethod{
+        let method = super::AuthenticationMethod {
             tag: "test".into(),
             name: "test".into(),
             image_path: "none".into(),
@@ -288,13 +290,13 @@ allowed_comm = [ "call" ]
             shim_tel_url: false,
         };
 
-        let result = tokio_test::block_on(
-            method.start(
-                &vec!["email".into()], 
-                "https://example.com/continuation", 
-                &Some("https://example.com/attr_url".into()), 
-                &config));
-        
+        let result = tokio_test::block_on(method.start(
+            &vec!["email".into()],
+            "https://example.com/continuation",
+            &Some("https://example.com/attr_url".into()),
+            &config,
+        ));
+
         start_mock.assert();
         assert_eq!(result.unwrap(), "https://example.com/client_url");
     }
@@ -304,11 +306,11 @@ allowed_comm = [ "call" ]
         let figment = Figment::from(rocket::Config::default())
             .select(rocket::Config::DEFAULT_PROFILE)
             .merge(Toml::string(TEST_CONFIG_VALID).nested());
-        
+
         let config = figment.extract::<CoreConfig>().unwrap();
 
         let server = MockServer::start();
-        let start_mock = server.mock(|when, then | {
+        let start_mock = server.mock(|when, then| {
             when.path("/start_authentication")
                 .method(httpmock::Method::POST)
                 .json_body(json!({
@@ -324,7 +326,7 @@ allowed_comm = [ "call" ]
                 }));
         });
 
-        let method = super::AuthenticationMethod{
+        let method = super::AuthenticationMethod {
             tag: "test".into(),
             name: "test".into(),
             image_path: "none".into(),
@@ -333,12 +335,12 @@ allowed_comm = [ "call" ]
             shim_tel_url: false,
         };
 
-        let result = tokio_test::block_on(
-            method.start(
-                &vec!["email".into()], 
-                "https://example.com/continuation", 
-                &None, 
-                &config));
+        let result = tokio_test::block_on(method.start(
+            &vec!["email".into()],
+            "https://example.com/continuation",
+            &None,
+            &config,
+        ));
 
         start_mock.assert();
         assert_eq!(result.unwrap(), "https://example.com/client_url");
@@ -349,20 +351,20 @@ allowed_comm = [ "call" ]
         let figment = Figment::from(rocket::Config::default())
             .select(rocket::Config::DEFAULT_PROFILE)
             .merge(Toml::string(TEST_CONFIG_VALID).nested());
-        
+
         let config = figment.extract::<CoreConfig>().unwrap();
 
         let server = MockServer::start();
-        let start_mock = server.mock(|when, then | {
+        let start_mock = server.mock(|when, then| {
             when.path("/start_authentication")
                 .method(httpmock::Method::POST)
                 .matches(|req| {
                     if let Some(body) = &req.body {
                         let body = serde_json::from_slice::<StartAuthRequest>(body);
                         if let Ok(body) = body {
-                            body.attr_url == None &&
-                            body.continuation != "https://example.com/continuation" &&
-                            body.attributes == vec!["email"]
+                            body.attr_url == None
+                                && body.continuation != "https://example.com/continuation"
+                                && body.attributes == vec!["email"]
                         } else {
                             false
                         }
@@ -377,7 +379,7 @@ allowed_comm = [ "call" ]
                 }));
         });
 
-        let method = super::AuthenticationMethod{
+        let method = super::AuthenticationMethod {
             tag: "test".into(),
             name: "test".into(),
             image_path: "none".into(),
@@ -386,13 +388,13 @@ allowed_comm = [ "call" ]
             shim_tel_url: false,
         };
 
-        let result = tokio_test::block_on(
-            method.start(
-                &vec!["email".into()], 
-                "https://example.com/continuation", 
-                &Some("https://example.com/attr_url".into()), 
-                &config));
-        
+        let result = tokio_test::block_on(method.start(
+            &vec!["email".into()],
+            "https://example.com/continuation",
+            &Some("https://example.com/attr_url".into()),
+            &config,
+        ));
+
         start_mock.assert();
         assert_eq!(result.unwrap(), "https://example.com/client_url");
     }
@@ -402,20 +404,20 @@ allowed_comm = [ "call" ]
         let figment = Figment::from(rocket::Config::default())
             .select(rocket::Config::DEFAULT_PROFILE)
             .merge(Toml::string(TEST_CONFIG_VALID).nested());
-        
+
         let config = figment.extract::<CoreConfig>().unwrap();
 
         let server = MockServer::start();
-        let start_mock = server.mock(|when, then | {
+        let start_mock = server.mock(|when, then| {
             when.path("/start_authentication")
                 .method(httpmock::Method::POST)
                 .matches(|req| {
                     if let Some(body) = &req.body {
                         let body = serde_json::from_slice::<StartAuthRequest>(body);
                         if let Ok(body) = body {
-                            body.attr_url == Some("https://example.com/attr_url".into()) &&
-                            body.continuation != "tel:0123456789" &&
-                            body.attributes == vec!["email"]
+                            body.attr_url == Some("https://example.com/attr_url".into())
+                                && body.continuation != "tel:0123456789"
+                                && body.attributes == vec!["email"]
                         } else {
                             false
                         }
@@ -430,7 +432,7 @@ allowed_comm = [ "call" ]
                 }));
         });
 
-        let method = super::AuthenticationMethod{
+        let method = super::AuthenticationMethod {
             tag: "test".into(),
             name: "test".into(),
             image_path: "none".into(),
@@ -439,13 +441,13 @@ allowed_comm = [ "call" ]
             shim_tel_url: true,
         };
 
-        let result = tokio_test::block_on(
-            method.start(
-                &vec!["email".into()], 
-                "tel:0123456789", 
-                &Some("https://example.com/attr_url".into()), 
-                &config));
-        
+        let result = tokio_test::block_on(method.start(
+            &vec!["email".into()],
+            "tel:0123456789",
+            &Some("https://example.com/attr_url".into()),
+            &config,
+        ));
+
         start_mock.assert();
         assert_eq!(result.unwrap(), "https://example.com/client_url");
     }
@@ -455,11 +457,11 @@ allowed_comm = [ "call" ]
         let figment = Figment::from(rocket::Config::default())
             .select(rocket::Config::DEFAULT_PROFILE)
             .merge(Toml::string(TEST_CONFIG_VALID).nested());
-        
+
         let config = figment.extract::<CoreConfig>().unwrap();
 
         let server = MockServer::start();
-        let start_mock = server.mock(|when, then | {
+        let start_mock = server.mock(|when, then| {
             when.path("/start_authentication")
                 .method(httpmock::Method::POST)
                 .json_body(json!({
@@ -476,7 +478,7 @@ allowed_comm = [ "call" ]
                 }));
         });
 
-        let method = super::AuthenticationMethod{
+        let method = super::AuthenticationMethod {
             tag: "test".into(),
             name: "test".into(),
             image_path: "none".into(),
@@ -485,13 +487,13 @@ allowed_comm = [ "call" ]
             shim_tel_url: true,
         };
 
-        let result = tokio_test::block_on(
-            method.start(
-                &vec!["email".into()], 
-                "https://example.com/continuation", 
-                &Some("https://example.com/attr_url".into()), 
-                &config));
-        
+        let result = tokio_test::block_on(method.start(
+            &vec!["email".into()],
+            "https://example.com/continuation",
+            &Some("https://example.com/attr_url".into()),
+            &config,
+        ));
+
         start_mock.assert();
         assert_eq!(result.unwrap(), "https://example.com/client_url");
     }
@@ -502,7 +504,9 @@ allowed_comm = [ "call" ]
 
         let figment = Figment::from(rocket::Config::default())
             .select(rocket::Config::DEFAULT_PROFILE)
-            .merge(Toml::string(&format!(r#"
+            .merge(
+                Toml::string(&format!(
+                    r#"
 [global]
 server_url = ""
 internal_url = "https://example.com/should_not_be_used"
@@ -560,7 +564,12 @@ tag = "test"
 attributes = [ "email" ]
 allowed_auth = [ "test" ]
 allowed_comm = [ "test" ]
-"#, server.base_url(), server.base_url())).nested());
+"#,
+                    server.base_url(),
+                    server.base_url()
+                ))
+                .nested(),
+            );
 
         let config = figment.extract::<CoreConfig>().unwrap();
         let client = Client::tracked(setup_routes(rocket::custom(figment))).unwrap();
@@ -576,9 +585,9 @@ allowed_comm = [ "test" ]
                             unsafe {
                                 ESCAPE_HATCH = Some(body.continuation.clone());
                             }
-                            body.attr_url == None &&
-                            body.continuation != "https://example.com/continuation" &&
-                            body.attributes == vec!["email"]
+                            body.attr_url == None
+                                && body.continuation != "https://example.com/continuation"
+                                && body.attributes == vec!["email"]
                         } else {
                             false
                         }
@@ -605,17 +614,23 @@ allowed_comm = [ "test" ]
             &vec!["email".into()],
             "https://example.com/continuation",
             &Some(format!("{}/attr_url", server.base_url())),
-            &config));
+            &config,
+        ));
 
         start_mock.assert();
         let result = result.unwrap();
         assert_eq!(result, "https://example.com/client_url");
 
         // Test authentication finish path
-        let auth_finish = unsafe {ESCAPE_HATCH.clone().unwrap()};
-        let response = client.get(format!("{}?result=test", auth_finish)).dispatch();
+        let auth_finish = unsafe { ESCAPE_HATCH.clone().unwrap() };
+        let response = client
+            .get(format!("{}?result=test", auth_finish))
+            .dispatch();
         attr_mock.assert();
         assert_eq!(response.status(), rocket::http::Status::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("https://example.com/continuation".into()));
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("https://example.com/continuation".into())
+        );
     }
 }

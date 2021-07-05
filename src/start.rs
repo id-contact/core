@@ -1,6 +1,6 @@
 use crate::error::Error;
 use crate::{config::CoreConfig, methods::Tag};
-use rocket::State;
+use rocket::{State, response::{Redirect, Responder}, Request, Response, http::Status};
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
 
@@ -31,11 +31,23 @@ pub struct ClientUrlResponse {
     client_url: String,
 }
 
+impl<'r> Responder<'r, 'static> for ClientUrlResponse {
+    fn respond_to(self, req: &'r Request<'_>) -> Result<Response<'static>, Status> {
+        if req.headers().get_one("Accept") == Some("application/json") {
+            return Some(Json(ClientUrlResponse {
+                client_url: self.client_url
+            })).respond_to(req)
+        }
+
+        return Some(Redirect::to(self.client_url)).respond_to(req);
+    }
+}
+
 #[post("/start", format = "application/json", data = "<choices>")]
 pub async fn session_start(
     choices: String,
     config: State<'_, CoreConfig>,
-) -> Result<Json<ClientUrlResponse>, Error> {
+) -> Result<ClientUrlResponse, Error> {
     // Workaround for issue where matching routes based on json body structure does not works as expected
     if let Ok(start_request) = serde_json::from_str::<StartRequestFull>(&choices) {
         session_start_full(start_request, config).await
@@ -51,7 +63,7 @@ pub async fn session_start(
 async fn session_start_full(
     choices: StartRequestFull,
     config: State<'_, CoreConfig>,
-) -> Result<Json<ClientUrlResponse>, Error> {
+) -> Result<ClientUrlResponse, Error> {
     // Fetch purpose and methods
     let purpose = config.purpose(&choices.purpose)?;
     let auth_method = config.auth_method(purpose, &choices.auth_method)?;
@@ -68,13 +80,13 @@ async fn session_start_full(
         )
         .await?;
 
-    Ok(Json(ClientUrlResponse { client_url }))
+     Ok(ClientUrlResponse { client_url })
 }
 
 async fn session_start_auth_only(
     choices: StartRequestAuthOnly,
     config: State<'_, CoreConfig>,
-) -> Result<Json<ClientUrlResponse>, Error> {
+) -> Result<ClientUrlResponse, Error> {
     // Fetch purpose and methods
     let purpose = config.purpose(&choices.purpose)?;
     let auth_method = config.auth_method(purpose, &choices.auth_method)?;
@@ -89,13 +101,13 @@ async fn session_start_auth_only(
         )
         .await?;
 
-    Ok(Json(ClientUrlResponse { client_url }))
+    Ok(ClientUrlResponse { client_url })
 }
 
 async fn start_session_comm_only(
     choices: StartRequestCommOnly,
     config: State<'_, CoreConfig>,
-) -> Result<Json<ClientUrlResponse>, Error> {
+) -> Result<ClientUrlResponse, Error> {
     // Fetch purpose and methods
     let purpose = config.purpose(&choices.purpose)?;
     let comm_method = config.comm_method(purpose, &choices.comm_method)?;
@@ -105,9 +117,9 @@ async fn start_session_comm_only(
         .start_with_auth_result(&choices.purpose, &choices.auth_result)
         .await?;
 
-    Ok(Json(ClientUrlResponse {
+    Ok(ClientUrlResponse {
         client_url: comm_data.client_url,
-    }))
+    })
 }
 
 #[cfg(test)]
@@ -116,7 +128,7 @@ mod tests {
         providers::{Format, Toml},
         Figment,
     };
-    use rocket::{http::ContentType, local::blocking::Client};
+    use rocket::{http::{ContentType, Accept}, local::blocking::Client};
     use serde_json::json;
 
     use crate::{setup_routes, start::ClientUrlResponse};
@@ -227,6 +239,7 @@ allowed_comm = [ "test" ]
         let request = client
             .post("/start")
             .header(ContentType::JSON)
+            .header(Accept::JSON)
             .body(r#"{"purpose":"test","auth_method":"test","comm_method":"test"}"#);
         let response = request.dispatch();
         auth_mock.assert();
@@ -331,6 +344,7 @@ allowed_comm = [ "test" ]
         let request = client
             .post("/start")
             .header(ContentType::JSON)
+            .header(Accept::JSON)
             .body(r#"{"purpose":"test","auth_method":"test","comm_url":"https://example.com/continuation","attr_url":"https://example.com/attr_url"}"#);
         let response = request.dispatch();
         auth_mock.assert();
@@ -433,6 +447,7 @@ allowed_comm = [ "test" ]
         let request = client
             .post("/start")
             .header(ContentType::JSON)
+            .header(Accept::JSON)
             .body(r#"{"purpose":"test","auth_method":"test","comm_url":"https://example.com/continuation"}"#);
         let response = request.dispatch();
         auth_mock.assert();
@@ -533,6 +548,7 @@ allowed_comm = [ "test" ]
         let request = client
             .post("/start")
             .header(ContentType::JSON)
+            .header(Accept::JSON)
             .body(r#"{"purpose":"test","comm_method":"test","auth_result":"test"}"#);
         let response = request.dispatch();
         comm_mock.assert();
