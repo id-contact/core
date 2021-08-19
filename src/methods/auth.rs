@@ -137,7 +137,7 @@ impl Method for AuthenticationMethod {
 pub async fn auth_attr_shim(
     state: String,
     result: String,
-    config: State<'_, CoreConfig>,
+    config: &State<CoreConfig>,
 ) -> Result<Redirect, Error> {
     // Unpack session state
     let state = config.decode_urlstate(state)?;
