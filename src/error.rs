@@ -6,8 +6,8 @@ pub enum Error {
     NoSuchPurpose(String),
     Reqwest(reqwest::Error),
     BadRequest,
-    JWT(josekit::JoseError),
-    JSON(serde_json::Error),
+    Jwt(josekit::JoseError),
+    Json(serde_json::Error),
 }
 
 impl From<reqwest::Error> for Error {
@@ -18,13 +18,13 @@ impl From<reqwest::Error> for Error {
 
 impl From<josekit::JoseError> for Error {
     fn from(e: josekit::JoseError) -> Error {
-        Error::JWT(e)
+        Error::Jwt(e)
     }
 }
 
 impl From<serde_json::Error> for Error {
     fn from(e: serde_json::Error) -> Error {
-        Error::JSON(e)
+        Error::Json(e)
     }
 }
 
@@ -59,8 +59,8 @@ impl Display for Error {
             Error::NoSuchMethod(m) => f.write_fmt(format_args!("No such method: {}", m)),
             Error::NoSuchPurpose(m) => f.write_fmt(format_args!("No such purpose: {}", m)),
             Error::Reqwest(e) => e.fmt(f),
-            Error::JWT(e) => e.fmt(f),
-            Error::JSON(e) => e.fmt(f),
+            Error::Jwt(e) => e.fmt(f),
+            Error::Json(e) => e.fmt(f),
             Error::BadRequest => f.write_str("Bad request"),
         }
     }
@@ -70,8 +70,8 @@ impl StdError for Error {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
             Error::Reqwest(e) => Some(e),
-            Error::JWT(e) => Some(e),
-            Error::JSON(e) => Some(e),
+            Error::Jwt(e) => Some(e),
+            Error::Json(e) => Some(e),
             _ => None,
         }
     }

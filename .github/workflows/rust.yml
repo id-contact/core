@@ -1,4 +1,4 @@
-name: Build ID Contact core and run tests
+name: Build and run tests
 
 on:
   push:
@@ -22,3 +22,9 @@ jobs:
       run: cargo test --verbose
     - name: Check code style
       run: cargo fmt -- --check
+    - uses: actions/checkout@v1
+    - run: rustup component add clippy
+    - uses: actions-rs/clippy-check@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        args: --all-features

@@ -1,6 +1,10 @@
 use crate::error::Error;
 use crate::{config::CoreConfig, methods::Tag};
-use rocket::{State, response::{Redirect, Responder}, Request, Response, http::Status};
+use rocket::{
+    http::Status,
+    response::{Redirect, Responder},
+    Request, Response, State,
+};
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
 
@@ -35,11 +39,12 @@ impl<'r> Responder<'r, 'static> for ClientUrlResponse {
     fn respond_to(self, req: &'r Request<'_>) -> Result<Response<'static>, Status> {
         if req.headers().get_one("Accept") == Some("application/json") {
             return Some(Json(ClientUrlResponse {
-                client_url: self.client_url
-            })).respond_to(req)
+                client_url: self.client_url,
+            }))
+            .respond_to(req);
         }
 
-        return Some(Redirect::to(self.client_url)).respond_to(req);
+        Some(Redirect::to(self.client_url)).respond_to(req)
     }
 }
 
@@ -80,7 +85,7 @@ async fn session_start_full(
         )
         .await?;
 
-     Ok(ClientUrlResponse { client_url })
+    Ok(ClientUrlResponse { client_url })
 }
 
 async fn session_start_auth_only(
@@ -128,7 +133,10 @@ mod tests {
         providers::{Format, Toml},
         Figment,
     };
-    use rocket::{http::{ContentType, Accept}, local::blocking::Client};
+    use rocket::{
+        http::{Accept, ContentType},
+        local::blocking::Client,
+    };
     use serde_json::json;
 
     use crate::{setup_routes, start::ClientUrlResponse};

@@ -11,7 +11,7 @@ pub struct SentryLogger {
 
 impl SentryLogger {
     pub fn new(inner: Box<dyn Log>) -> SentryLogger {
-        SentryLogger { inner: inner }
+        SentryLogger { inner }
     }
 }
 

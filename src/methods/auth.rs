@@ -27,7 +27,7 @@ pub struct AuthenticationMethod {
 impl AuthenticationMethod {
     pub async fn start(
         &self,
-        attributes: &Vec<String>,
+        attributes: &[String],
         continuation: &str,
         attr_url: &Option<String>,
         config: &CoreConfig,
@@ -48,8 +48,8 @@ impl AuthenticationMethod {
         Ok(client
             .post(&format!("{}/start_authentication", self.start))
             .json(&StartAuthRequest {
-                attributes: attributes.clone(),
-                continuation: continuation,
+                attributes: attributes.to_vec(),
+                continuation,
                 attr_url: attr_url.clone(),
             })
             .send()
@@ -63,7 +63,7 @@ impl AuthenticationMethod {
     // Start session using fallback shim for attribute url handling
     async fn start_fallback(
         &self,
-        attributes: &Vec<String>,
+        attributes: &[String],
         continuation: String,
         attr_url: &str,
         config: &CoreConfig,
@@ -81,7 +81,7 @@ impl AuthenticationMethod {
         Ok(client
             .post(&format!("{}/start_authentication", self.start))
             .json(&StartAuthRequest {
-                attributes: attributes.clone(),
+                attributes: attributes.to_vec(),
                 continuation: format!("{}/auth_attr_shim/{}", config.server_url(), state),
                 attr_url: None,
             })
