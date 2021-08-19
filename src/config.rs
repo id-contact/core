@@ -1,5 +1,5 @@
 use crate::error::Error;
-use crate::methods::{AuthenticationMethod, CommunicationMethod, Method, Tag};
+use crate::methods::{AuthenticationMethod, CommunicationMethod, Method};
 use id_contact_jwt::SignKeyConfig;
 use josekit::{
     jws::{
@@ -135,39 +135,36 @@ impl From<RawCoreConfig> for CoreConfig {
 }
 
 impl CoreConfig {
-    pub fn purpose(&self, purpose: &Tag) -> Result<&Purpose, Error> {
-        Ok(self
-            .purposes
+    pub fn purpose(&self, purpose: &str) -> Result<&Purpose, Error> {
+        self.purposes
             .get(purpose)
-            .ok_or_else(|| Error::NoSuchPurpose(purpose.to_string()))?)
+            .ok_or_else(|| Error::NoSuchPurpose(purpose.to_string()))
     }
 
     pub fn comm_method(
         &self,
         purpose: &Purpose,
-        comm_method: &Tag,
+        comm_method: &str,
     ) -> Result<&CommunicationMethod, Error> {
-        if !purpose.allowed_comm.contains(comm_method) {
+        if !purpose.allowed_comm.iter().any(|c| c == comm_method) {
             return Err(Error::NoSuchMethod(comm_method.to_string()));
         }
-        Ok(self
-            .comm_methods
+        self.comm_methods
             .get(comm_method)
-            .ok_or_else(|| Error::NoSuchMethod(comm_method.to_string()))?)
+            .ok_or_else(|| Error::NoSuchMethod(comm_method.to_string()))
     }
 
     pub fn auth_method(
         &self,
         purpose: &Purpose,
-        auth_method: &Tag,
+        auth_method: &str,
     ) -> Result<&AuthenticationMethod, Error> {
-        if !purpose.allowed_auth.contains(auth_method) {
+        if !purpose.allowed_auth.iter().any(|c| c == auth_method) {
             return Err(Error::NoSuchMethod(auth_method.to_string()));
         }
-        Ok(self
-            .auth_methods
+        self.auth_methods
             .get(auth_method)
-            .ok_or_else(|| Error::NoSuchMethod(auth_method.to_string()))?)
+            .ok_or_else(|| Error::NoSuchMethod(auth_method.to_string()))
     }
 
     pub fn encode_urlstate(&self, state: HashMap<String, String>) -> Result<String, Error> {
@@ -181,11 +178,7 @@ impl CoreConfig {
             payload.set_claim(k, Some(serde_json::to_value(v)?))?;
         }
 
-        Ok(jwt::encode_with_signer(
-            &payload,
-            &JwsHeader::new(),
-            &self.internal_signer,
-        )?)
+        Ok(jwt::encode_with_signer(&payload, &JwsHeader::new(), &self.internal_signer)?)
     }
 
     pub fn decode_urlstate(&self, urlstate: String) -> Result<HashMap<String, String>, Error> {
@@ -214,7 +207,7 @@ impl CoreConfig {
         &self.ui_tel_url
     }
 
-    pub fn internal_url(&self) -> &str {
+    pub fn _internal_url(&self) -> &str {
         &self.internal_url
     }
 

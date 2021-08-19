@@ -34,7 +34,7 @@ impl Method for CommunicationMethod {
 
 impl CommunicationMethod {
     // Start a communication session to be composed with an authentication session
-    pub async fn start(&self, purpose: &Tag) -> Result<StartCommResponse, reqwest::Error> {
+    pub async fn start(&self, purpose: &str) -> Result<StartCommResponse, reqwest::Error> {
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(5))
             .build()?;
@@ -42,7 +42,7 @@ impl CommunicationMethod {
         Ok(client
             .post(&format!("{}/start_communication", &self.start))
             .json(&StartCommRequest {
-                purpose: purpose.clone(),
+                purpose: purpose.to_string(),
                 auth_result: None,
             })
             .send()
@@ -54,7 +54,7 @@ impl CommunicationMethod {
     // Falback for plugins not supporting attribute reception on startup
     async fn start_with_attributes_fallback(
         &self,
-        purpose: &Tag,
+        purpose: &str,
         auth_result: &str,
     ) -> Result<StartCommResponse, reqwest::Error> {
         let comm_data = self.start(purpose).await?;
@@ -96,7 +96,7 @@ impl CommunicationMethod {
     // Start a communication session for which we already have authentication results.
     pub async fn start_with_auth_result(
         &self,
-        purpose: &Tag,
+        purpose: &str,
         auth_result: &str,
     ) -> Result<StartCommResponse, reqwest::Error> {
         if self.disable_attributes_at_start {
@@ -112,7 +112,7 @@ impl CommunicationMethod {
         Ok(client
             .post(&format!("{}/start_communication", &self.start))
             .json(&StartCommRequest {
-                purpose: purpose.clone(),
+                purpose: purpose.to_string(),
                 auth_result: Some(auth_result.to_string()),
             })
             .send()
