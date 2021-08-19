@@ -152,7 +152,7 @@ mod tests {
             disable_attributes_at_start: false,
         };
 
-        let result = tokio_test::block_on(method.start(&"something".into()));
+        let result = tokio_test::block_on(method.start("something"));
 
         start_mock.assert();
         let result = result.unwrap();
@@ -185,7 +185,7 @@ mod tests {
             disable_attributes_at_start: false,
         };
 
-        let result = tokio_test::block_on(method.start(&"something".into()));
+        let result = tokio_test::block_on(method.start("something"));
 
         start_mock.assert();
         let result = result.unwrap();
@@ -219,7 +219,7 @@ mod tests {
         };
 
         let result =
-            tokio_test::block_on(method.start_with_auth_result(&"something".into(), "test"));
+            tokio_test::block_on(method.start_with_auth_result("something", "test"));
 
         start_mock.assert();
         let result = result.unwrap();
@@ -260,7 +260,7 @@ mod tests {
         };
 
         let result =
-            tokio_test::block_on(method.start_with_auth_result(&"something".into(), "test"));
+            tokio_test::block_on(method.start_with_auth_result("something", "test"));
 
         start_mock.assert();
         auth_mock.assert();
