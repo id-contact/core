@@ -178,7 +178,11 @@ impl CoreConfig {
             payload.set_claim(k, Some(serde_json::to_value(v)?))?;
         }
 
-        Ok(jwt::encode_with_signer(&payload, &JwsHeader::new(), &self.internal_signer)?)
+        Ok(jwt::encode_with_signer(
+            &payload,
+            &JwsHeader::new(),
+            &self.internal_signer,
+        )?)
     }
 
     pub fn decode_urlstate(&self, urlstate: String) -> Result<HashMap<String, String>, Error> {

@@ -218,8 +218,7 @@ mod tests {
             disable_attributes_at_start: false,
         };
 
-        let result =
-            tokio_test::block_on(method.start_with_auth_result("something", "test"));
+        let result = tokio_test::block_on(method.start_with_auth_result("something", "test"));
 
         start_mock.assert();
         let result = result.unwrap();
@@ -259,8 +258,7 @@ mod tests {
             disable_attributes_at_start: true,
         };
 
-        let result =
-            tokio_test::block_on(method.start_with_auth_result("something", "test"));
+        let result = tokio_test::block_on(method.start_with_auth_result("something", "test"));
 
         start_mock.assert();
         auth_mock.assert();
