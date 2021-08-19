@@ -1,11 +1,11 @@
 use crate::error::Error;
 use crate::{config::CoreConfig, methods::Tag};
+use rocket::serde::json::Json;
 use rocket::{
     http::Status,
     response::{Redirect, Responder},
     Request, Response, State,
 };
-use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
@@ -51,7 +51,7 @@ impl<'r> Responder<'r, 'static> for ClientUrlResponse {
 #[post("/start", format = "application/json", data = "<choices>")]
 pub async fn session_start(
     choices: String,
-    config: State<'_, CoreConfig>,
+    config: &State<CoreConfig>,
 ) -> Result<ClientUrlResponse, Error> {
     // Workaround for issue where matching routes based on json body structure does not works as expected
     if let Ok(start_request) = serde_json::from_str::<StartRequestFull>(&choices) {
@@ -67,7 +67,7 @@ pub async fn session_start(
 
 async fn session_start_full(
     choices: StartRequestFull,
-    config: State<'_, CoreConfig>,
+    config: &State<CoreConfig>,
 ) -> Result<ClientUrlResponse, Error> {
     // Fetch purpose and methods
     let purpose = config.purpose(&choices.purpose)?;
@@ -81,7 +81,7 @@ async fn session_start_full(
             &purpose.attributes,
             &comm_data.client_url,
             &comm_data.attr_url,
-            &config,
+            config,
         )
         .await?;
 
@@ -90,7 +90,7 @@ async fn session_start_full(
 
 async fn session_start_auth_only(
     choices: StartRequestAuthOnly,
-    config: State<'_, CoreConfig>,
+    config: &State<CoreConfig>,
 ) -> Result<ClientUrlResponse, Error> {
     // Fetch purpose and methods
     let purpose = config.purpose(&choices.purpose)?;
@@ -102,7 +102,7 @@ async fn session_start_auth_only(
             &purpose.attributes,
             &choices.comm_url,
             &choices.attr_url,
-            &config,
+            config,
         )
         .await?;
 
@@ -111,7 +111,7 @@ async fn session_start_auth_only(
 
 async fn start_session_comm_only(
     choices: StartRequestCommOnly,
-    config: State<'_, CoreConfig>,
+    config: &State<CoreConfig>,
 ) -> Result<ClientUrlResponse, Error> {
     // Fetch purpose and methods
     let purpose = config.purpose(&choices.purpose)?;

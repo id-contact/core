@@ -11,17 +11,17 @@ extern crate rocket;
 use config::CoreConfig;
 use methods::auth_attr_shim;
 use options::{all_session_options, session_options};
-use rocket::fairing::AdHoc;
+use rocket::{fairing::AdHoc, Build};
 use start::session_start;
 
 #[launch]
-fn boot() -> rocket::Rocket {
+fn boot() -> _ {
     log::set_boxed_logger(Box::new(sentry::SentryLogger::new(Box::new(
         env_logger::builder().parse_default_env().build(),
     ))))
     .expect("failure to setup loggin");
 
-    let base = setup_routes(rocket::ignite());
+    let base = setup_routes(rocket::build());
     let config = base.figment().extract::<CoreConfig>().unwrap_or_else(|e| {
         log::error!("Failure to parse configuration {}", e);
         panic!("Failure to parse configuration {}", e)
@@ -32,7 +32,7 @@ fn boot() -> rocket::Rocket {
     }
 }
 
-fn setup_routes(base: rocket::Rocket) -> rocket::Rocket {
+fn setup_routes(base: rocket::Rocket<Build>) -> rocket::Rocket<Build> {
     base.mount(
         "/",
         routes![

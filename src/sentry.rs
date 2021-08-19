@@ -87,7 +87,7 @@ impl Fairing for SentryFairing {
                 &format!(
                     "Abnormal response {} ({}), on request for {} ({})",
                     response.status().code,
-                    response.status().reason,
+                    response.status().reason().unwrap_or("Unknown reason"),
                     request.uri(),
                     match request.route() {
                         Some(r) => match &r.name {

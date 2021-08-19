@@ -2,8 +2,7 @@ use std::collections::HashMap;
 
 use crate::methods::{Method, Tag};
 use crate::{config::CoreConfig, error::Error};
-use rocket::State;
-use rocket_contrib::json::Json;
+use rocket::{serde::json::Json, State};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -41,7 +40,7 @@ pub struct SessionOptions {
 type AllSessionOptions = HashMap<String, SessionOptions>;
 
 #[get("/session_options")]
-pub fn all_session_options(config: State<CoreConfig>) -> Result<Json<AllSessionOptions>, Error> {
+pub fn all_session_options(config: &State<CoreConfig>) -> Result<Json<AllSessionOptions>, Error> {
     let mut all_options: AllSessionOptions = HashMap::new();
 
     for (name, purpose) in &config.purposes {
@@ -69,7 +68,7 @@ pub fn all_session_options(config: State<CoreConfig>) -> Result<Json<AllSessionO
 #[get("/session_options/<purpose>")]
 pub fn session_options(
     purpose: String,
-    config: State<CoreConfig>,
+    config: &State<CoreConfig>,
 ) -> Result<Json<SessionOptions>, Error> {
     let purpose = config
         .purposes
