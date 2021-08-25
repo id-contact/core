@@ -22,9 +22,10 @@ fn boot() -> _ {
     .expect("failure to setup loggin");
 
     let base = setup_routes(rocket::build());
-    let config = base.figment().extract::<CoreConfig>().unwrap_or_else(|e| {
-        log::error!("Failure to parse configuration {}", e);
-        panic!("Failure to parse configuration {}", e)
+    let config = base.figment().extract::<CoreConfig>().unwrap_or_else(|_| {
+        // Ignore error value, as it could contain private keys
+        log::error!("Failure to parse configuration");
+        panic!("Failure to parse configuration")
     });
     match config.sentry_dsn() {
         Some(dsn) => base.attach(sentry::SentryFairing::new(dsn)),
