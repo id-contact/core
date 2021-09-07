@@ -22,3 +22,4 @@ urlencoding = "1.3.3"
 figment = { version = "0.10.5", features = ["env", "toml", "json"] }
 httpmock = "0.5.8"
 tokio-test = "0.4.2"
+id-contact-comm-common = { git = "https://github.com/id-contact/comm-common.git", branch="authenticated_auth_during_comm", features = ["auth_during_comm"] }
