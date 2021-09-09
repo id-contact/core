@@ -94,12 +94,8 @@ impl From<RawCoreConfig> for CoreConfig {
                 .authonly_request_keys
                 .into_iter()
                 .map(|(requestor, key)| {
-                    let key = Box::<dyn JwsVerifier>::try_from(key).unwrap_or_else(|e| {
-                        log::error!(
-                            "Could not parse requestor key for requestor {}: {}",
-                            requestor,
-                            e
-                        );
+                    let key = Box::<dyn JwsVerifier>::try_from(key).unwrap_or_else(|_| {
+                        log::error!("Could not parse requestor key for requestor {}", requestor);
                         panic!("Invalid requestor key")
                     });
                     (requestor, key)
