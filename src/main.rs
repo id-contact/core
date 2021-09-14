@@ -2,7 +2,6 @@ mod config;
 mod error;
 mod methods;
 mod options;
-mod sentry;
 mod start;
 
 #[macro_use]
@@ -16,10 +15,7 @@ use start::{session_start, session_start_jwt};
 
 #[launch]
 fn boot() -> _ {
-    log::set_boxed_logger(Box::new(sentry::SentryLogger::new(Box::new(
-        env_logger::builder().parse_default_env().build(),
-    ))))
-    .expect("failure to setup loggin");
+    id_contact_sentry::SentryLogger::init();
 
     let base = setup_routes(rocket::build());
     let config = base.figment().extract::<CoreConfig>().unwrap_or_else(|_| {
@@ -28,7 +24,7 @@ fn boot() -> _ {
         panic!("Failure to parse configuration")
     });
     match config.sentry_dsn() {
-        Some(dsn) => base.attach(sentry::SentryFairing::new(dsn)),
+        Some(dsn) => base.attach(id_contact_sentry::SentryFairing::new(dsn, "core")),
         None => base,
     }
 }

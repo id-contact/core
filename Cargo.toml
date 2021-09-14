@@ -5,14 +5,13 @@ authors = ["Marlon Baeten <marlon@tweedegolf.com>"]
 edition = "2018"
 
 [dependencies]
-env_logger = "0.8.4"
+id-contact-sentry = { git = "https://github.com/id-contact/id-contact-sentry.git" }
 id-contact-jwt = { git = "https://github.com/id-contact/id-contact-jwt.git" }
 id-contact-proto = { git = "https://github.com/id-contact/id-contact-proto.git" }
 josekit = "0.7.1"
 log = "0.4.14"
 reqwest = { version = "0.11.3", features = ["json"] }
 rocket = { version = "0.5.0-rc.1", features = ["json"] }
-sentry = "0.22.0"
 serde = { version = "1.0.126", features = ["derive"] }
 serde_json = "1.0.64"
 serde_yaml = "0.8.17"
