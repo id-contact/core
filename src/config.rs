@@ -11,6 +11,7 @@ use josekit::{
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::fmt::Debug;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Purpose {
@@ -20,12 +21,28 @@ pub struct Purpose {
     pub allowed_comm: Vec<String>,
 }
 
+#[derive(Deserialize)]
+#[serde(from = "String")]
+struct TokenSecret(String);
+
+impl Debug for TokenSecret {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TokenSecret").finish()
+    }
+}
+
+impl From<String> for TokenSecret {
+    fn from(value: String) -> Self {
+        TokenSecret(value)
+    }
+}
+
 #[derive(Debug, Deserialize)]
 struct RawCoreConfig {
     auth_methods: Vec<AuthenticationMethod>,
     comm_methods: Vec<CommunicationMethod>,
     purposes: Vec<Purpose>,
-    internal_secret: String,
+    internal_secret: TokenSecret,
     server_url: String,
     internal_url: String,
     ui_tel_url: String,
@@ -85,13 +102,13 @@ impl From<RawCoreConfig> for CoreConfig {
                 .map(|m| (m.tag.clone(), m.clone()))
                 .collect(),
             internal_signer: Hs256
-                .signer_from_bytes(config.internal_secret.as_bytes())
+                .signer_from_bytes(config.internal_secret.0.as_bytes())
                 .unwrap_or_else(|e| {
                     log::error!("Could not generate signer from internal secret: {}", e);
                     panic!("Could not generate signer from internal secret: {}", e)
                 }),
             internal_verifier: Hs256
-                .verifier_from_bytes(config.internal_secret.as_bytes())
+                .verifier_from_bytes(config.internal_secret.0.as_bytes())
                 .unwrap_or_else(|e| {
                     log::error!("Could not generate verifier from internal secret: {}", e);
                     panic!("Could not generate verifier from internal secret: {}", e)
@@ -232,7 +249,7 @@ mod tests {
     use rocket::figment::Figment;
 
     use super::CoreConfig;
-    use crate::methods::Method;
+    use crate::{config::TokenSecret, methods::Method};
 
     // Test data
     const TEST_CONFIG_VALID: &'static str = r#"
@@ -584,6 +601,16 @@ allowed_comm = [ "call" ]
         assert!(config
             .comm_method(purpose_request_passport, &"chat".to_string())
             .is_err());
+    }
+
+    #[test]
+    fn test_log_hiding() {
+        let test_token = TokenSecret::from("test".to_string());
+        assert_eq!(format!("{:?}", test_token), "TokenSecret");
+
+        let config = config_from_str(TEST_CONFIG_VALID);
+        assert_eq!(format!("{:?}", config.internal_signer), "HmacJwsSigner { algorithm: Hs256, private_key: PKey { algorithm: \"HMAC\" }, key_id: None }");
+        assert_eq!(format!("{:?}", config.internal_verifier), "HmacJwsVerifier { algorithm: Hs256, private_key: PKey { algorithm: \"HMAC\" }, key_id: None }");
     }
 
     #[test]
