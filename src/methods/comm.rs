@@ -78,15 +78,9 @@ impl CommunicationMethod {
         } else {
             Ok(StartCommResponse {
                 client_url: if comm_data.client_url.contains('?') {
-                    format!(
-                        "{}&status=succes&attributes={}",
-                        comm_data.client_url, auth_result
-                    )
+                    format!("{}&result={}", comm_data.client_url, auth_result)
                 } else {
-                    format!(
-                        "{}?status=succes&attributes={}",
-                        comm_data.client_url, auth_result
-                    )
+                    format!("{}?result={}", comm_data.client_url, auth_result)
                 },
                 attr_url: None,
             })
@@ -264,6 +258,41 @@ mod tests {
         auth_mock.assert();
         let result = result.unwrap();
         assert_eq!(result.client_url, "https://example.com/client_url");
+        assert_eq!(result.attr_url, None);
+    }
+
+    #[test]
+    fn test_auth_result_fallback_no_attr_url() {
+        let server = MockServer::start();
+        let start_mock = server.mock(|when, then| {
+            when.path("/start_communication")
+                .method(httpmock::Method::POST)
+                .json_body(json!({
+                    "purpose": "something",
+                }));
+            then.status(200)
+                .header("Content-Type", "application/json")
+                .json_body(json!({
+                    "client_url": "https://example.com/client_url",
+                }));
+        });
+
+        let method = super::CommunicationMethod {
+            tag: "test".into(),
+            name: "test".into(),
+            image_path: "none".into(),
+            start: server.base_url(),
+            disable_attributes_at_start: true,
+        };
+
+        let result = tokio_test::block_on(method.start_with_auth_result("something", "test"));
+
+        start_mock.assert();
+        let result = result.unwrap();
+        assert_eq!(
+            result.client_url,
+            "https://example.com/client_url?result=test"
+        );
         assert_eq!(result.attr_url, None);
     }
 }
