@@ -8,6 +8,8 @@ mod start;
 #[macro_use]
 extern crate rocket;
 
+use std::cmp::max;
+
 use config::CoreConfig;
 use methods::auth_attr_shim;
 use options::{all_session_options, session_options};
@@ -16,10 +18,13 @@ use start::{session_start, session_start_jwt};
 
 #[launch]
 fn boot() -> _ {
+    let envlogger = env_logger::builder().parse_default_env().build();
+    let envlogger_level = envlogger.filter();
     log::set_boxed_logger(Box::new(sentry::SentryLogger::new(Box::new(
         env_logger::builder().parse_default_env().build(),
     ))))
     .expect("failure to setup loggin");
+    log::set_max_level(max(envlogger_level, log::LevelFilter::Error)); // Ensure loggers receive messages to decide what to do with them.
 
     let base = setup_routes(rocket::build());
     let config = base.figment().extract::<CoreConfig>().unwrap_or_else(|_| {
