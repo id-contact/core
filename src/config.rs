@@ -97,8 +97,7 @@ impl From<RawCoreConfig> for CoreConfig {
                     let key = Box::<dyn JwsVerifier>::try_from(key).unwrap_or_else(|e| {
                         log::error!(
                             "Could not parse requestor key for requestor {}: {}",
-                            requestor,
-                            e
+                            requestor
                         );
                         panic!("Invalid requestor key")
                     });
