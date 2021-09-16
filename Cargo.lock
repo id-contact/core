@@ -1188,7 +1188,7 @@ dependencies = [
 [[package]]
 name = "id-contact-comm-common"
 version = "0.1.0"
-source = "git+https://github.com/id-contact/comm-common.git?branch=authenticated_auth_during_comm#1842f2dbec4abb1296de162e2fe4a5cebe2af67b"
+source = "git+https://github.com/id-contact/comm-common.git?rev=20852f1#20852f123c118d7d0831804835f8dfef24d5cf45"
 dependencies = [
  "id-contact-jwt",
  "id-contact-proto",

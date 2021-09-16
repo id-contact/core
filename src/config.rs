@@ -14,6 +14,7 @@ use josekit::{
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::fmt::Debug;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Purpose {
@@ -23,14 +24,29 @@ pub struct Purpose {
     pub allowed_comm: Vec<String>,
 }
 
+#[derive(Deserialize)]
+#[serde(from = "String")]
+struct TokenSecret(String);
+
+impl Debug for TokenSecret {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TokenSecret").finish()
+    }
+}
+
+impl From<String> for TokenSecret {
+    fn from(value: String) -> Self {
+        TokenSecret(value)
+    }
+}
+
 #[derive(Debug, Deserialize)]
 struct RawCoreConfig {
     auth_methods: Vec<AuthenticationMethod>,
     comm_methods: Vec<CommunicationMethod>,
     purposes: Vec<Purpose>,
-    #[serde(default)]
     authonly_request_keys: HashMap<String, SignKeyConfig>,
-    internal_secret: String,
+    internal_secret: TokenSecret,
     server_url: String,
     internal_url: String,
     ui_tel_url: String,
@@ -94,24 +110,21 @@ impl From<RawCoreConfig> for CoreConfig {
                 .authonly_request_keys
                 .into_iter()
                 .map(|(requestor, key)| {
-                    let key = Box::<dyn JwsVerifier>::try_from(key).unwrap_or_else(|e| {
-                        log::error!(
-                            "Could not parse requestor key for requestor {}: {}",
-                            requestor
-                        );
+                    let key = Box::<dyn JwsVerifier>::try_from(key).unwrap_or_else(|_| {
+                        log::error!("Could not parse requestor key for requestor {}", requestor);
                         panic!("Invalid requestor key")
                     });
                     (requestor, key)
                 })
                 .collect(),
             internal_signer: Hs256
-                .signer_from_bytes(config.internal_secret.as_bytes())
+                .signer_from_bytes(config.internal_secret.0.as_bytes())
                 .unwrap_or_else(|e| {
                     log::error!("Could not generate signer from internal secret: {}", e);
                     panic!("Could not generate signer from internal secret: {}", e)
                 }),
             internal_verifier: Hs256
-                .verifier_from_bytes(config.internal_secret.as_bytes())
+                .verifier_from_bytes(config.internal_secret.0.as_bytes())
                 .unwrap_or_else(|e| {
                     log::error!("Could not generate verifier from internal secret: {}", e);
                     panic!("Could not generate verifier from internal secret: {}", e)
@@ -273,7 +286,7 @@ mod tests {
     use rocket::figment::Figment;
 
     use super::CoreConfig;
-    use crate::methods::Method;
+    use crate::{config::TokenSecret, methods::Method};
 
     // Test data
     const TEST_CONFIG_VALID: &'static str = r#"
@@ -314,6 +327,20 @@ HqwVHvPMwVsexcRTdC0evaX/09s0xscSACvFJh5Dm9gnuMHElBcpZFATIvFcbV5Y
 MbJ/NNQiD63NEcL9VXwT96sMx2tnduOq4sYzu84kwPQ4ohxmPt/7xHU3L8SGqoec
 Bs6neR/sZuHzNm8y/xtxj2ZAEw==
 -----END PRIVATE KEY-----
+"""
+
+[global.authonly_request_keys.test]
+type = "RSA"
+key = """
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA5/wRrT2T4GGvuQYcWjLr
+/lFe51sTV2FLd3GAaMiHN8Q/VT/XEhP/kZ6042l1Bj2VpZ2yMxv294JKwBCINc34
+8VLYd+DfkMnJ4yX9LZHK2Wke6tCWBB9mYgGjMwCNdXczbl96x1/HevaTorvk91rz
+Cvzw6vV08jtprAyN5aYMU4I0/cVJwi03bh/skraAB110mQSqi1QU/2z6Hkuf7+/x
+/bACxviWCyPCd/wkXNpFhTcRlfFeyKcy0pwFx1OLCDJ1qY7oU+z1wcypeOHeiUSx
+riSHlWaT24ke+J78GGVmnCZdu/MRuun5hvgaiWxnhIBmExJY6vRuMlwkbRqOft5Q
+TQIDAQAB
+-----END PUBLIC KEY-----
 """
 
 [[global.auth_methods]]
@@ -625,6 +652,16 @@ allowed_comm = [ "call" ]
         assert!(config
             .comm_method(purpose_request_passport, &"chat".to_string())
             .is_err());
+    }
+
+    #[test]
+    fn test_log_hiding() {
+        let test_token = TokenSecret::from("test".to_string());
+        assert_eq!(format!("{:?}", test_token), "TokenSecret");
+
+        let config = config_from_str(TEST_CONFIG_VALID);
+        assert_eq!(format!("{:?}", config.internal_signer), "HmacJwsSigner { algorithm: Hs256, private_key: PKey { algorithm: \"HMAC\" }, key_id: None }");
+        assert_eq!(format!("{:?}", config.internal_verifier), "HmacJwsVerifier { algorithm: Hs256, private_key: PKey { algorithm: \"HMAC\" }, key_id: None }");
     }
 
     #[test]
