@@ -1,6 +1,9 @@
 use crate::error::Error;
 use crate::methods::{AuthenticationMethod, CommunicationMethod, Method};
+use crate::start::StartRequestAuthOnly;
 use id_contact_jwt::SignKeyConfig;
+use josekit::jws::JwsVerifier;
+use josekit::jwt::decode_with_verifier_selector;
 use josekit::{
     jws::{
         alg::hmac::{HmacJwsAlgorithm::Hs256, HmacJwsSigner, HmacJwsVerifier},
@@ -42,6 +45,7 @@ struct RawCoreConfig {
     auth_methods: Vec<AuthenticationMethod>,
     comm_methods: Vec<CommunicationMethod>,
     purposes: Vec<Purpose>,
+    authonly_request_keys: HashMap<String, SignKeyConfig>,
     internal_secret: TokenSecret,
     server_url: String,
     internal_url: String,
@@ -56,6 +60,7 @@ pub struct CoreConfig {
     pub auth_methods: HashMap<String, AuthenticationMethod>,
     pub comm_methods: HashMap<String, CommunicationMethod>,
     pub purposes: HashMap<String, Purpose>,
+    authonly_request_keys: HashMap<String, Box<dyn JwsVerifier>>,
     internal_signer: HmacJwsSigner,
     internal_verifier: HmacJwsVerifier,
     server_url: String,
@@ -88,18 +93,29 @@ impl From<RawCoreConfig> for CoreConfig {
         let mut config = CoreConfig {
             auth_methods: config
                 .auth_methods
-                .iter()
-                .map(|m| (m.tag().clone(), m.clone()))
+                .into_iter()
+                .map(|m| (m.tag().clone(), m))
                 .collect(),
             comm_methods: config
                 .comm_methods
-                .iter()
-                .map(|m| (m.tag().clone(), m.clone()))
+                .into_iter()
+                .map(|m| (m.tag().clone(), m))
                 .collect(),
             purposes: config
                 .purposes
-                .iter()
-                .map(|m| (m.tag.clone(), m.clone()))
+                .into_iter()
+                .map(|m| (m.tag.clone(), m))
+                .collect(),
+            authonly_request_keys: config
+                .authonly_request_keys
+                .into_iter()
+                .map(|(requestor, key)| {
+                    let key = Box::<dyn JwsVerifier>::try_from(key).unwrap_or_else(|_| {
+                        log::error!("Could not parse requestor key for requestor {}", requestor);
+                        panic!("Invalid requestor key")
+                    });
+                    (requestor, key)
+                })
                 .collect(),
             internal_signer: Hs256
                 .signer_from_bytes(config.internal_secret.0.as_bytes())
@@ -218,6 +234,27 @@ impl CoreConfig {
         }
 
         Ok(result)
+    }
+
+    pub fn decode_authonly_request(
+        &self,
+        request_jwt: &str,
+    ) -> Result<StartRequestAuthOnly, Error> {
+        let decoded = decode_with_verifier_selector(request_jwt, |header| {
+            Ok(header
+                .key_id()
+                .map(|kid| self.authonly_request_keys.get(kid))
+                .flatten()
+                .map(|key| key.as_ref()))
+        })?
+        .0;
+        let mut validator = JwtPayloadValidator::new();
+        validator.set_base_time(std::time::SystemTime::now());
+        validator.validate(&decoded)?;
+        let request = decoded.claim("request").ok_or(Error::BadRequest)?;
+        Ok(serde_json::from_value::<StartRequestAuthOnly>(
+            request.clone(),
+        )?)
     }
 
     pub fn server_url(&self) -> &str {
