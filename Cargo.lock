@@ -1245,7 +1245,7 @@ dependencies = [
 [[package]]
 name = "id-contact-sentry"
 version = "0.1.0"
-source = "git+https://github.com/id-contact/id-contact-sentry.git#2b5f05c42f9ca120e09366f8356a9ba41be42be5"
+source = "git+https://github.com/id-contact/id-contact-sentry.git#28409a807851cba92539b3972aa5271d99d025b5"
 dependencies = [
  "env_logger",
  "log",
