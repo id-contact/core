@@ -8,7 +8,7 @@ use rocket::{
 };
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, FromForm)]
 pub struct StartRequestFull {
     purpose: String,
     auth_method: Tag,
@@ -73,6 +73,14 @@ pub async fn session_start(
     } else {
         Err(Error::BadRequest)
     }
+}
+
+#[get("/start?<choices..>")]
+pub async fn session_start_get(
+    choices: StartRequestFull,
+    config: &State<CoreConfig>,
+) -> Result<ClientUrlResponse, Error> {
+    session_start_full(choices, config).await
 }
 
 async fn session_start_full(
