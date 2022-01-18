@@ -76,8 +76,12 @@ pub async fn session_start(
     }
 }
 
-#[post("/start", format = "application/x-www-form-urlencoded", data = "<choices>")]
-pub async fn session_start_get(
+#[post(
+    "/start",
+    format = "application/x-www-form-urlencoded",
+    data = "<choices>"
+)]
+pub async fn session_start_form(
     choices: Form<StartRequestFull>,
     config: &State<CoreConfig>,
 ) -> Result<ClientUrlResponse, Error> {
