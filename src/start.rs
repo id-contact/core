@@ -2,13 +2,14 @@ use crate::error::Error;
 use crate::{config::CoreConfig, methods::Tag};
 use rocket::serde::json::Json;
 use rocket::{
+    form::Form,
     http::Status,
     response::{Redirect, Responder},
     Request, Response, State,
 };
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, FromForm)]
 pub struct StartRequestFull {
     purpose: String,
     auth_method: Tag,
@@ -73,6 +74,18 @@ pub async fn session_start(
     } else {
         Err(Error::BadRequest)
     }
+}
+
+#[post(
+    "/start",
+    format = "application/x-www-form-urlencoded",
+    data = "<choices>"
+)]
+pub async fn session_start_form(
+    choices: Form<StartRequestFull>,
+    config: &State<CoreConfig>,
+) -> Result<ClientUrlResponse, Error> {
+    session_start_full(choices.into_inner(), config).await
 }
 
 async fn session_start_full(

@@ -11,7 +11,7 @@ use config::CoreConfig;
 use methods::auth_attr_shim;
 use options::{all_session_options, session_options};
 use rocket::{fairing::AdHoc, Build};
-use start::{session_start, session_start_jwt};
+use start::{session_start, session_start_form, session_start_jwt};
 
 #[launch]
 fn boot() -> _ {
@@ -36,6 +36,7 @@ fn setup_routes(base: rocket::Rocket<Build>) -> rocket::Rocket<Build> {
             all_session_options,
             session_options,
             session_start,
+            session_start_form,
             session_start_jwt,
             auth_attr_shim,
         ],
