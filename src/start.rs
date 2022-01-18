@@ -2,6 +2,7 @@ use crate::error::Error;
 use crate::{config::CoreConfig, methods::Tag};
 use rocket::serde::json::Json;
 use rocket::{
+    form::Form,
     http::Status,
     response::{Redirect, Responder},
     Request, Response, State,
@@ -75,12 +76,12 @@ pub async fn session_start(
     }
 }
 
-#[get("/start?<choices..>")]
+#[post("/start", format = "application/x-www-form-urlencoded", data = "<choices>")]
 pub async fn session_start_get(
-    choices: StartRequestFull,
+    choices: Form<StartRequestFull>,
     config: &State<CoreConfig>,
 ) -> Result<ClientUrlResponse, Error> {
-    session_start_full(choices, config).await
+    session_start_full(choices.into_inner(), config).await
 }
 
 async fn session_start_full(
