@@ -50,7 +50,7 @@ struct RawCoreConfig {
     server_url: String,
     internal_url: String,
     ui_tel_url: String,
-    ui_signing_privkey: SignKeyConfig,
+    ui_signing_privkey: Option<SignKeyConfig>,
     sentry_dsn: Option<String>,
 }
 
@@ -66,7 +66,7 @@ pub struct CoreConfig {
     server_url: String,
     internal_url: String,
     ui_tel_url: String,
-    ui_signer: Box<dyn JwsSigner>,
+    ui_signer: Option<Box<dyn JwsSigner>>,
     sentry_dsn: Option<String>,
 }
 
@@ -129,17 +129,25 @@ impl From<RawCoreConfig> for CoreConfig {
                     log::error!("Could not generate verifier from internal secret: {}", e);
                     panic!("Could not generate verifier from internal secret: {}", e)
                 }),
-            ui_signer: Box::<dyn JwsSigner>::try_from(config.ui_signing_privkey).unwrap_or_else(
-                |e| {
+            ui_signer: config.ui_signing_privkey.map(|ui_signing_privkey| {
+                Box::<dyn JwsSigner>::try_from(ui_signing_privkey).unwrap_or_else(|e| {
                     log::error!("Could not generate signer from core private key: {}", e);
                     panic!("Could not generate signer from core private key: {}", e)
-                },
-            ),
+                })
+            }),
             internal_url: config.internal_url,
             server_url: config.server_url,
             ui_tel_url: config.ui_tel_url,
             sentry_dsn: config.sentry_dsn,
         };
+
+        // Check ui signer present when using telephone shim
+        for auth_method in config.auth_methods.values() {
+            if auth_method.shim_tel_url && config.ui_signer.is_none() {
+                log::error!("Cannot use telephone url shim without ui signer");
+                panic!("Cannot use telephone url shim without ui signer");
+            }
+        }
 
         // Handle wildcards in purpose auth and comm method lists
         for purpose in config.purposes.values_mut() {
@@ -273,8 +281,8 @@ impl CoreConfig {
         self.sentry_dsn.as_deref()
     }
 
-    pub fn ui_signer(&self) -> &dyn JwsSigner {
-        self.ui_signer.as_ref()
+    pub fn ui_signer(&self) -> Option<&dyn JwsSigner> {
+        self.ui_signer.as_ref().map(|v| v.as_ref())
     }
 }
 

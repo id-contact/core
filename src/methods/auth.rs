@@ -21,7 +21,7 @@ pub struct AuthenticationMethod {
     #[serde(default = "bool::default")]
     disable_attr_url: bool,
     #[serde(default = "bool::default")]
-    shim_tel_url: bool,
+    pub shim_tel_url: bool, // Needed public to validate configuration
 }
 
 impl AuthenticationMethod {
@@ -32,7 +32,7 @@ impl AuthenticationMethod {
         attr_url: &Option<String>,
         config: &CoreConfig,
     ) -> Result<String, Error> {
-        let continuation = self.parse_continuation(continuation, config);
+        let continuation = self.parse_continuation(continuation, config)?;
         if let Some(attr_url) = attr_url {
             if self.disable_attr_url {
                 return self
@@ -93,17 +93,17 @@ impl AuthenticationMethod {
             .client_url)
     }
 
-    fn parse_continuation(&self, continuation: &str, config: &CoreConfig) -> String {
+    fn parse_continuation(&self, continuation: &str, config: &CoreConfig) -> Result<String, Error> {
         if continuation.starts_with("tel:") && self.shim_tel_url {
-            let token = sign_continuation(continuation, config);
-            format!("{}{}", config.ui_tel_url(), &token)
+            let token = sign_continuation(continuation, config)?;
+            Ok(format!("{}{}", config.ui_tel_url(), &token))
         } else {
-            continuation.to_string()
+            Ok(continuation.to_string())
         }
     }
 }
 
-fn sign_continuation(continuation: &str, config: &CoreConfig) -> String {
+fn sign_continuation(continuation: &str, config: &CoreConfig) -> Result<String, Error> {
     let mut payload = JwtPayload::new();
     payload.set_issued_at(&std::time::SystemTime::now());
 
@@ -116,7 +116,12 @@ fn sign_continuation(continuation: &str, config: &CoreConfig) -> String {
             Some(serde_json::to_value(continuation).unwrap()),
         )
         .unwrap();
-    jwt::encode_with_signer(&payload, &JwsHeader::new(), config.ui_signer()).unwrap()
+    Ok(jwt::encode_with_signer(
+        &payload,
+        &JwsHeader::new(),
+        config.ui_signer().ok_or(Error::BadConfig)?,
+    )
+    .unwrap())
 }
 
 impl Method for AuthenticationMethod {
