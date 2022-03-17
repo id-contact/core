@@ -49,7 +49,7 @@ struct RawCoreConfig {
     internal_secret: TokenSecret,
     server_url: String,
     internal_url: String,
-    ui_tel_url: String,
+    ui_tel_url: Option<String>,
     ui_signing_privkey: Option<SignKeyConfig>,
     sentry_dsn: Option<String>,
 }
@@ -65,7 +65,7 @@ pub struct CoreConfig {
     internal_verifier: HmacJwsVerifier,
     server_url: String,
     internal_url: String,
-    ui_tel_url: String,
+    ui_tel_url: Option<String>,
     ui_signer: Option<Box<dyn JwsSigner>>,
     sentry_dsn: Option<String>,
 }
@@ -143,9 +143,11 @@ impl From<RawCoreConfig> for CoreConfig {
 
         // Check ui signer present when using telephone shim
         for auth_method in config.auth_methods.values() {
-            if auth_method.shim_tel_url && config.ui_signer.is_none() {
-                log::error!("Cannot use telephone url shim without ui signer");
-                panic!("Cannot use telephone url shim without ui signer");
+            if auth_method.shim_tel_url
+                && (config.ui_signer.is_none() || config.ui_tel_url.is_none())
+            {
+                log::error!("Cannot use telephone url shim without ui configuration");
+                panic!("Cannot use telephone url shim without ui configuration");
             }
         }
 
@@ -269,8 +271,8 @@ impl CoreConfig {
         &self.server_url
     }
 
-    pub fn ui_tel_url(&self) -> &str {
-        &self.ui_tel_url
+    pub fn ui_tel_url(&self) -> Option<&str> {
+        self.ui_tel_url.as_ref().map(|v| v.as_ref())
     }
 
     pub fn _internal_url(&self) -> &str {

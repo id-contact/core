@@ -96,7 +96,11 @@ impl AuthenticationMethod {
     fn parse_continuation(&self, continuation: &str, config: &CoreConfig) -> Result<String, Error> {
         if continuation.starts_with("tel:") && self.shim_tel_url {
             let token = sign_continuation(continuation, config)?;
-            Ok(format!("{}{}", config.ui_tel_url(), &token))
+            Ok(format!(
+                "{}{}",
+                config.ui_tel_url().ok_or(Error::BadConfig)?,
+                &token
+            ))
         } else {
             Ok(continuation.to_string())
         }
