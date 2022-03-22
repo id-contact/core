@@ -8,12 +8,12 @@ edition = "2018"
 id-contact-sentry = { git = "https://github.com/id-contact/id-contact-sentry.git" }
 id-contact-jwt = { git = "https://github.com/id-contact/id-contact-jwt.git" }
 id-contact-proto = { git = "https://github.com/id-contact/id-contact-proto.git" }
-josekit = "0.7.4"
-log = "0.4.14"
-reqwest = { version = "0.11.9", features = ["json"] }
+josekit = "0.8.0"
+log = "0.4.15"
+reqwest = { version = "0.11.10", features = ["json"] }
 rocket = { version = "0.5.0-rc.1", features = ["json"] }
-serde = { version = "1.0.133", features = ["derive"] }
-serde_json = "1.0.75"
+serde = { version = "1.0.136", features = ["derive"] }
+serde_json = "1.0.79"
 serde_yaml = "0.8.23"
 urlencoding = "2.1.0"
 
@@ -24,5 +24,5 @@ tokio-test = "0.4.2"
 
 [dev-dependencies.id-contact-comm-common]
 git = "https://github.com/id-contact/comm-common.git"
-rev = "20852f1"
+rev = "d74b798bdfe2d7b90f7271c9ef2b6fd83b7207ad"
 features = ["auth_during_comm"]
