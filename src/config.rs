@@ -249,9 +249,7 @@ impl CoreConfig {
     ) -> Result<StartRequestAuthOnly, Error> {
         let decoded = decode_with_verifier_selector(request_jwt, |header| {
             Ok(header
-                .key_id()
-                .map(|kid| self.authonly_request_keys.get(kid))
-                .flatten()
+                .key_id().and_then(|kid| self.authonly_request_keys.get(kid))
                 .map(|key| key.as_ref()))
         })?
         .0;
