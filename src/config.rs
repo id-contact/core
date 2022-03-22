@@ -48,7 +48,6 @@ struct RawCoreConfig {
     authonly_request_keys: HashMap<String, SignKeyConfig>,
     internal_secret: TokenSecret,
     server_url: String,
-    internal_url: String,
     ui_tel_url: Option<String>,
     ui_signing_privkey: Option<SignKeyConfig>,
     sentry_dsn: Option<String>,
@@ -64,7 +63,6 @@ pub struct CoreConfig {
     internal_signer: HmacJwsSigner,
     internal_verifier: HmacJwsVerifier,
     server_url: String,
-    internal_url: String,
     ui_tel_url: Option<String>,
     ui_signer: Option<Box<dyn JwsSigner>>,
     sentry_dsn: Option<String>,
@@ -135,7 +133,6 @@ impl From<RawCoreConfig> for CoreConfig {
                     panic!("Could not generate signer from core private key: {}", e)
                 })
             }),
-            internal_url: config.internal_url,
             server_url: config.server_url,
             ui_tel_url: config.ui_tel_url,
             sentry_dsn: config.sentry_dsn,
@@ -273,10 +270,6 @@ impl CoreConfig {
 
     pub fn ui_tel_url(&self) -> Option<&str> {
         self.ui_tel_url.as_ref().map(|v| v.as_ref())
-    }
-
-    pub fn _internal_url(&self) -> &str {
-        &self.internal_url
     }
 
     pub fn sentry_dsn(&self) -> Option<&str> {
