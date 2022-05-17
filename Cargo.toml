@@ -3,6 +3,7 @@ name = "id-contact-core"
 version = "0.1.0"
 authors = ["Marlon Baeten <marlon@tweedegolf.com>"]
 edition = "2018"
+resolver = "2"
 
 [dependencies]
 id-contact-sentry = { git = "https://github.com/id-contact/id-contact-sentry.git" }
