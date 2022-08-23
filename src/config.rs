@@ -42,15 +42,16 @@ impl From<String> for TokenSecret {
 
 #[derive(Debug, Deserialize)]
 struct RawCoreConfig {
+    #[serde(default)]
     auth_methods: Vec<AuthenticationMethod>,
+    #[serde(default)]
     comm_methods: Vec<CommunicationMethod>,
     purposes: Vec<Purpose>,
     authonly_request_keys: HashMap<String, SignKeyConfig>,
     internal_secret: TokenSecret,
     server_url: String,
-    internal_url: String,
-    ui_tel_url: String,
-    ui_signing_privkey: SignKeyConfig,
+    ui_tel_url: Option<String>,
+    ui_signing_privkey: Option<SignKeyConfig>,
     sentry_dsn: Option<String>,
 }
 
@@ -64,9 +65,8 @@ pub struct CoreConfig {
     internal_signer: HmacJwsSigner,
     internal_verifier: HmacJwsVerifier,
     server_url: String,
-    internal_url: String,
-    ui_tel_url: String,
-    ui_signer: Box<dyn JwsSigner>,
+    ui_tel_url: Option<String>,
+    ui_signer: Option<Box<dyn JwsSigner>>,
     sentry_dsn: Option<String>,
 }
 
@@ -129,13 +129,12 @@ impl From<RawCoreConfig> for CoreConfig {
                     log::error!("Could not generate verifier from internal secret: {}", e);
                     panic!("Could not generate verifier from internal secret: {}", e)
                 }),
-            ui_signer: Box::<dyn JwsSigner>::try_from(config.ui_signing_privkey).unwrap_or_else(
-                |e| {
+            ui_signer: config.ui_signing_privkey.map(|v| {
+                Box::<dyn JwsSigner>::try_from(v).unwrap_or_else(|e| {
                     log::error!("Could not generate signer from core private key: {}", e);
                     panic!("Could not generate signer from core private key: {}", e)
-                },
-            ),
-            internal_url: config.internal_url,
+                })
+            }),
             server_url: config.server_url,
             ui_tel_url: config.ui_tel_url,
             sentry_dsn: config.sentry_dsn,
@@ -243,8 +242,7 @@ impl CoreConfig {
         let decoded = decode_with_verifier_selector(request_jwt, |header| {
             Ok(header
                 .key_id()
-                .map(|kid| self.authonly_request_keys.get(kid))
-                .flatten()
+                .and_then(|kid| self.authonly_request_keys.get(kid))
                 .map(|key| key.as_ref()))
         })?
         .0;
@@ -261,20 +259,16 @@ impl CoreConfig {
         &self.server_url
     }
 
-    pub fn ui_tel_url(&self) -> &str {
-        &self.ui_tel_url
-    }
-
-    pub fn _internal_url(&self) -> &str {
-        &self.internal_url
+    pub fn ui_tel_url(&self) -> Option<&str> {
+        self.ui_tel_url.as_deref()
     }
 
     pub fn sentry_dsn(&self) -> Option<&str> {
         self.sentry_dsn.as_deref()
     }
 
-    pub fn ui_signer(&self) -> &dyn JwsSigner {
-        self.ui_signer.as_ref()
+    pub fn ui_signer(&self) -> Option<&dyn JwsSigner> {
+        self.ui_signer.as_deref()
     }
 }
 

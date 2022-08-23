@@ -39,7 +39,7 @@ impl CommunicationMethod {
             .timeout(Duration::from_secs(5))
             .build()?;
 
-        Ok(client
+        client
             .post(&format!("{}/start_communication", &self.start))
             .json(&StartCommRequest {
                 purpose: purpose.to_string(),
@@ -48,7 +48,7 @@ impl CommunicationMethod {
             .send()
             .await?
             .json::<StartCommResponse>()
-            .await?)
+            .await
     }
 
     // Falback for plugins not supporting attribute reception on startup
@@ -103,7 +103,7 @@ impl CommunicationMethod {
             .timeout(Duration::from_secs(5))
             .build()?;
 
-        Ok(client
+        client
             .post(&format!("{}/start_communication", &self.start))
             .json(&StartCommRequest {
                 purpose: purpose.to_string(),
@@ -113,7 +113,7 @@ impl CommunicationMethod {
             .await?
             .error_for_status()?
             .json::<StartCommResponse>()
-            .await?)
+            .await
     }
 }
 

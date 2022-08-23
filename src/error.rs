@@ -6,6 +6,7 @@ pub enum Error {
     NoSuchPurpose(String),
     Reqwest(reqwest::Error),
     BadRequest,
+    BadConfig,
     Jwt(josekit::JoseError),
     Json(serde_json::Error),
 }
@@ -62,6 +63,7 @@ impl Display for Error {
             Error::Jwt(e) => e.fmt(f),
             Error::Json(e) => e.fmt(f),
             Error::BadRequest => f.write_str("Bad request"),
+            Error::BadConfig => f.write_str("Bad configuration"),
         }
     }
 }
